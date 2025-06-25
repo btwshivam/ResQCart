@@ -1,0 +1,90 @@
+# OS Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# IDE and Editor folders
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.sublime-workspace
+*.sublime-project
+.project
+.classpath
+*.iml
+.vs/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Environment Variables
+# .env files are now tracked
+# .env
+# .env.local
+# .env.development.local
+# .env.test.local
+# .env.production.local
+# .env.secret
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+# Build directories
+dist/
+build/
+out/
+.next/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+*.so
+.Python
+env/
+venv/
+ENV/
+.env/
+.venv/
+.eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Project specific
+# Add any project-specific ignores below
+
+# ML models and data files
+*.h5
+*.pkl
+*.model
+*.bin
+*.pt
+*.pth
+*.onnx
+
+# Exceptions for sample data that should be included
+!**/data/sample/** 
