@@ -106,8 +106,34 @@ npm run dev
 **AIML Setup:**
 ```
 cd aiml
+
+# 2️⃣ Create a virtual environment (recommended)
+# On Linux / macOS
+python3 -m venv venv
+
+# On Windows
+python -m venv venv 
+
+# 3️⃣ Activate the virtual environment
+# Linux / macOS
+source venv/bin/activate
+
+# Windows (PowerShell)
+.\venv\Scripts\activate
+
+# 4️⃣ Install required dependencies
 pip install -r requirements.txt
-python -m src.api.server
+
+# 5️⃣ Run the FastAPI server
+# Example: use uvicorn with hot reload (for dev)
+uvicorn app:app  --host 0.0.0.0 --port 8000 --reload
+
+# 6️⃣ Run YOLO detect_predict script for real time detection (If u want to test it locally.)
+python detect_predict.py  (In the archive folder)
+
+# 7️⃣ Verify server is running
+# Open http://localhost:8000/docs to test your API.
+
 ```
 
 ### Environment Variables
