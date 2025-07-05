@@ -1,0 +1,62 @@
+Milk Spoilage Prediction and Price Engine
+Key Points:
+
+Research suggests ~16% of milk produced globally is wasted, with significant losses in the USA due to spoilage, overproduction, and consumer behavior.
+Pasteurized whole milk tends to spoil more than skim or UHT milk due to higher fat content.
+Spoilage is predicted using simulated pH, bacterial load, and days past expiry, with a dynamic price engine recommending sell, donate, or dump actions.
+The system uses a FastAPI endpoint to process milk SKU inputs, simulate spoilage metrics, and provide pricing decisions for your teammates’ frontend.
+
+Milk Spoilage in the USA
+Approximately 16% of dairy products, including milk, are wasted annually, with the USA contributing significantly due to its high production (26.4 billion gallons in 2023). During the COVID-19 pandemic, 2.7–3.7 million gallons were dumped daily due to reduced demand, though typical annual spoilage is lower but still substantial, with consumer waste (e.g., due to misunderstood date labels) accounting for ~19% of dairy waste.
+Types of Milk Prone to Spoilage
+Pasteurized whole milk spoils faster than skim or low-fat milk due to higher fat content, which supports bacterial growth. Psychrotrophic bacteria (e.g., Pseudomonas) cause souring and curdling, especially in refrigerated storage. UHT milk has a longer shelf life due to ultra-high-temperature processing, reducing spoilage risk.
+Prevention Methods
+
+Proper Storage: Store milk at 0–4°C to slow bacterial growth.
+Improved Packaging: Use light-blocking containers to prevent light-induced spoilage.
+Bioprotective Cultures: Add cultures to inhibit spoilage bacteria.
+Consumer Education: Clarify date labels to reduce premature disposal.
+
+System Overview
+The system accepts a milk SKU (e.g., “whole_milk_1gal”), simulates spoilage metrics (pH, bacterial load, days past expiry), predicts spoilage using a logistic function based on research, and applies a dynamic price engine to recommend actions (sell, donate, dump) with a message explaining the prediction.
+sensor_api.pypythonShow inlineMilk Spoilage in the USA
+Research suggests that approximately 16% of dairy products, including milk, are wasted annually, with the USA contributing significantly due to its high production of 26.4 billion gallons in 2023 .
+Types of Milk Prone to Spoilage
+
+Whole Milk: More prone to spoilage due to higher fat content (3.5–4%), which supports bacterial growth, particularly psychrotrophic bacteria like Pseudomonas that produce proteolytic and lipolytic enzymes .
+Skim and Low-Fat Milk: Less susceptible due to lower fat content (0–2%), but still vulnerable to lactic acid bacteria causing souring (pH ~4.5) .
+UHT Milk: Least prone due to ultra-high-temperature processing, extending shelf life to months .
+Organic Milk: May spoil faster if not UHT-treated, as it lacks preservatives and has higher microbial loads from natural production.
+
+Causes of Spoilage
+
+Bacterial Growth: Psychrotrophs (e.g., Pseudomonas, Bacillus) grow at 0–7°C, producing enzymes that degrade proteins and fats, leading to souring, curdling, and off-odors .
+Storage Conditions: Temperatures above 4°C or light exposure accelerate spoilage .
+Contamination: Post-pasteurization contamination from equipment or packaging introduces spoilage bacteria .
+
+Prevention Methods
+
+Refrigeration: Store at 0–4°C to inhibit psychrotrophic bacteria .
+Light-Blocking Packaging: Use opaque containers to prevent light-induced degradation .
+Bioprotective Cultures: Add cultures to suppress spoilage bacteria .
+Consumer Education: Clarify “sell-by” vs. “use-by” labels to reduce premature disposal .
+
+Milk Spoilage Prediction
+The system simulates spoilage metrics for a given milk SKU (e.g., “whole_milk_1gal”):
+
+Days Past Expiry: 0–14 days, reflecting shelf life impact.
+pH: 6.4–6.6 (fresh), 4.5–5.5 (spoiled), as lactic acid bacteria lower pH .
+Bacterial Load: 2–8 log CFU/mL (fresh), 8–10 log CFU/mL (spoiled), based on microbial growth models.
+Storage Temperature: 0–10°C, affecting spoilage rate.
+
+Spoilage is predicted using a logistic function:
+$ P(\text{spoiled}) = \frac{1}{1 + e^{-(w_1 \cdot \text{days} + w_2 \cdot \text{pH} + w_3 \cdot \text{bacterial\_load} + b)}} $
+
+Weights ($w_1=0.5$, $w_2=-1.0$, $w_3=0.8$) and bias ($b=-5.0$) are derived from research on microbial spoilage dynamics .
+
+Price Engine Logic
+
+Base Price: $3.45/gallon (2023 average, Statista).
+Fresh Milk (probability < 0.5, days past expiry < 2): Sell with 0–10% discount.
+Mildly Spoiled (probability 0.5–0.7, pH ≥ 5.0): Sell with 20–50% discount.
+Severely Spoiled (probability > 0.7, pH < 5.0): Donate if bacterial load < 9.0 log CFU/mL, else dump.
