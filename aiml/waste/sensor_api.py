@@ -1,52 +1,12 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from PIL import Image
-import torch
-from torchvision import models, transforms
-import io
 import requests
 import random
 import math
 import datetime
 
-# ✅ 1 app instance for everything
 app = FastAPI()
 
-# === 🍎 1️⃣ Apple Spoilage Model ===
-
-# Load ResNet50 spoilage model
-model = models.resnet50(weights=None)
-model.fc = torch.nn.Sequential(
-    torch.nn.Linear(model.fc.in_features, 128),
-    torch.nn.ReLU(),
-    torch.nn.Linear(128, 1),
-    torch.nn.Sigmoid()
-)
-model.load_state_dict(torch.load('models/spoilage_cnn.pth', map_location=torch.device('cpu')))
-model.eval()
-device = torch.device('cpu')
-model = model.to(device)
-
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-])
-
-@app.post("/predict_apple_image")
-async def predict_apple_image(file: UploadFile = File(...)):
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="Invalid file type. Please upload an image.")
-    
-    contents = await file.read()
-    image = Image.open(io.BytesIO(contents)).convert('RGB')
-    image = transform(image).unsqueeze(0).to(device)
-    
-    with torch.no_grad():
-        output = model(image)
-        pred = output.item()
-        label = 'rottenapples' if pred > 0.8 else 'freshapples'
-    
-    return {"prediction": label, "confidence": pred}
+apple_predict_url = 'http://localhost:8000/predict'
 
 def simulate_apple_sensor_data(prediction, confidence):
     if prediction == 'rottenapples':
@@ -98,30 +58,6 @@ def dynamic_apple_price_engine(prediction, confidence, sensor_data):
         'discount_percent': round(discount_percent, 1),
         'price_usd': price,
         'message': message
-    }
-
-@app.post("/predict_apple_with_sensor")
-async def predict_apple_with_sensor(file: UploadFile = File(...)):
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="Invalid file type. Please upload an image.")
-    
-    contents = await file.read()
-    # Directly reuse local prediction logic instead of hitting self
-    image = Image.open(io.BytesIO(contents)).convert('RGB')
-    image = transform(image).unsqueeze(0).to(device)
-    with torch.no_grad():
-        output = model(image)
-        pred = output.item()
-        prediction = 'rottenapples' if pred > 0.7 else 'freshapples'
-    
-    sensor_data = simulate_apple_sensor_data(prediction, pred)
-    pricing = dynamic_apple_price_engine(prediction, pred, sensor_data)
-    
-    return {
-        'prediction': prediction,
-        'confidence': pred,
-        'sensor_data': sensor_data,
-        'pricing': pricing
     }
 
 def simulate_milk_spoilage_data(sku):

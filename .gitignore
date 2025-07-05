@@ -80,7 +80,7 @@ docker-compose.override.yml
 # ML models and data files
 *.h5
 *.pkl
-*.model
+# *.model
 *.bin
 *.pt
 *.pth

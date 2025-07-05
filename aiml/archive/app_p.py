@@ -3,17 +3,12 @@ from PIL import Image
 import torch
 from torchvision import models, transforms
 import io
-import requests
 import random
 import math
 import datetime
 
-# ✅ 1 app instance for everything
 app = FastAPI()
 
-# === 🍎 1️⃣ Apple Spoilage Model ===
-
-# Load ResNet50 spoilage model
 model = models.resnet50(weights=None)
 model.fc = torch.nn.Sequential(
     torch.nn.Linear(model.fc.in_features, 128),
@@ -21,6 +16,7 @@ model.fc = torch.nn.Sequential(
     torch.nn.Linear(128, 1),
     torch.nn.Sigmoid()
 )
+
 model.load_state_dict(torch.load('models/spoilage_cnn.pth', map_location=torch.device('cpu')))
 model.eval()
 device = torch.device('cpu')
@@ -65,36 +61,40 @@ def simulate_apple_sensor_data(prediction, confidence):
 
 def dynamic_apple_price_engine(prediction, confidence, sensor_data):
     base_price = 1.00
+    ethylene = sensor_data['ethylene_ppm']
+
     if prediction == 'freshapples':
-        discount_percent = min(sensor_data['ethylene_ppm'] * 10, 10) if sensor_data['ethylene_ppm'] >= 0.2 else 0
+        discount_percent = min(ethylene * 10, 10) if ethylene >= 0.2 else 0
         price = round(base_price * (1 - discount_percent / 100), 2)
         action = 'sell'
-        discount_applied = discount_percent > 0
         message = None
     else:
-        if confidence > 0.7 and sensor_data['ethylene_ppm'] > 5.0:
-            if sensor_data['ethylene_ppm'] < 7.5:
+        if confidence > 0.7:
+            if ethylene < 5.0:
+                action = 'sell'
+                discount_percent = 30
+                price = round(base_price * (1 - discount_percent / 100), 2)
+                message = None
+            elif ethylene < 10.0:
                 action = 'donate'
-                message = 'Donate to local food bank for community support.'
-                price = 0.00
-                discount_applied = False
                 discount_percent = 0
+                price = 0.00
+                message = 'Donate to local food bank for community support.'
             else:
                 action = 'dump'
-                message = 'Dispose of spoiled apple safely to prevent contamination.'
-                price = 0.00
-                discount_applied = False
                 discount_percent = 0
+                price = 0.00
+                message = 'Dispose of spoiled apple safely to prevent contamination.'
         else:
             discount_percent = 20 + (confidence - 0.5) * 100 * 0.6
             discount_percent = min(discount_percent, 50)
             price = round(base_price * (1 - discount_percent / 100), 2)
             action = 'sell'
-            discount_applied = True
             message = None
+
     return {
         'action': action,
-        'discount_applied': discount_applied,
+        'discount_applied': discount_percent>0,
         'discount_percent': round(discount_percent, 1),
         'price_usd': price,
         'message': message
@@ -234,32 +234,6 @@ def generate_explanation_message(spoilage_data, prediction, probability):
         f"donate if usable but not sellable, or dump if unsafe, optimizing inventory for a retail store."
     )
 
-@app.post("/predict_with_sensor")
-async def predict_with_sensor(file: UploadFile = File(...)):
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="Invalid file type. Please upload an image.")
-    
-    contents = await file.read()
-    
-    try:
-        response = requests.post(apple_predict_url, files={'file': ('image.jpg', contents, 'image/jpeg')})
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Error from predict endpoint")
-        result = response.json()
-        prediction = result['prediction']
-        confidence = result['confidence']
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Predict endpoint error: {str(e)}")
-    
-    sensor_data = simulate_apple_sensor_data(prediction, confidence)
-    pricing = dynamic_apple_price_engine(prediction, confidence, sensor_data)
-    
-    return {
-        'prediction': prediction,
-        'confidence': confidence,
-        'sensor_data': sensor_data,
-        'pricing': pricing
-    }
 
 @app.post("/predict_milk_spoilage")
 async def predict_milk_spoilage(sku: str = "whole_milk_1gal"):
