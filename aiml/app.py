@@ -1,19 +1,29 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import torch
+import numpy as np
+import cv2
 from torchvision import models, transforms
-import io
-import requests
 import random
 import math
 import datetime
+from ultralytics import YOLO
 
-# ✅ 1 app instance for everything
+""" well if u want to run the yolo model locally u can use the archive scripts.
+    Here the yolo model is added in same fastapi for integrating it with frontend.
+"""
+
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# === 🍎 1️⃣ Apple Spoilage Model ===
+yolo_model = YOLO('models/yolo_apple.pt')
 
-# Load ResNet50 spoilage model
 model = models.resnet50(weights=None)
 model.fc = torch.nn.Sequential(
     torch.nn.Linear(model.fc.in_features, 128),
@@ -21,6 +31,8 @@ model.fc = torch.nn.Sequential(
     torch.nn.Linear(128, 1),
     torch.nn.Sigmoid()
 )
+
+
 model.load_state_dict(torch.load('models/spoilage_cnn.pth', map_location=torch.device('cpu')))
 model.eval()
 device = torch.device('cpu')
@@ -31,22 +43,6 @@ transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
-
-@app.post("/predict_apple_image")
-async def predict_apple_image(file: UploadFile = File(...)):
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="Invalid file type. Please upload an image.")
-    
-    contents = await file.read()
-    image = Image.open(io.BytesIO(contents)).convert('RGB')
-    image = transform(image).unsqueeze(0).to(device)
-    
-    with torch.no_grad():
-        output = model(image)
-        pred = output.item()
-        label = 'rottenapples' if pred > 0.8 else 'freshapples'
-    
-    return {"prediction": label, "confidence": pred}
 
 def simulate_apple_sensor_data(prediction, confidence):
     if prediction == 'rottenapples':
@@ -65,64 +61,90 @@ def simulate_apple_sensor_data(prediction, confidence):
 
 def dynamic_apple_price_engine(prediction, confidence, sensor_data):
     base_price = 1.00
+    ethylene = sensor_data['ethylene_ppm']
+
     if prediction == 'freshapples':
-        discount_percent = min(sensor_data['ethylene_ppm'] * 10, 10) if sensor_data['ethylene_ppm'] >= 0.2 else 0
+        discount_percent = min(ethylene * 10, 10) if ethylene >= 0.2 else 0
         price = round(base_price * (1 - discount_percent / 100), 2)
         action = 'sell'
-        discount_applied = discount_percent > 0
         message = None
     else:
-        if confidence > 0.7 and sensor_data['ethylene_ppm'] > 5.0:
-            if sensor_data['ethylene_ppm'] < 7.5:
+        if confidence > 0.7:
+            if ethylene < 5.0:
+                action = 'sell'
+                discount_percent = 30
+                price = round(base_price * (1 - discount_percent / 100), 2)
+                message = None
+            elif ethylene < 10.0:
                 action = 'donate'
-                message = 'Donate to local food bank for community support.'
-                price = 0.00
-                discount_applied = False
                 discount_percent = 0
+                price = 0.00
+                message = 'Donate to local food bank for community support.'
             else:
                 action = 'dump'
-                message = 'Dispose of spoiled apple safely to prevent contamination.'
-                price = 0.00
-                discount_applied = False
                 discount_percent = 0
+                price = 0.00
+                message = 'Dispose of spoiled apple safely to prevent contamination.'
         else:
             discount_percent = 20 + (confidence - 0.5) * 100 * 0.6
             discount_percent = min(discount_percent, 50)
             price = round(base_price * (1 - discount_percent / 100), 2)
             action = 'sell'
-            discount_applied = True
             message = None
+
     return {
         'action': action,
-        'discount_applied': discount_applied,
+        'discount_applied': discount_percent>0,
         'discount_percent': round(discount_percent, 1),
         'price_usd': price,
         'message': message
     }
 
-@app.post("/predict_apple_with_sensor")
-async def predict_apple_with_sensor(file: UploadFile = File(...)):
+@app.post("/detect")
+async def detect_apples(file: UploadFile = File(...)):
     if not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="Invalid file type. Please upload an image.")
     
     contents = await file.read()
-    # Directly reuse local prediction logic instead of hitting self
-    image = Image.open(io.BytesIO(contents)).convert('RGB')
-    image = transform(image).unsqueeze(0).to(device)
-    with torch.no_grad():
-        output = model(image)
-        pred = output.item()
-        prediction = 'rottenapples' if pred > 0.7 else 'freshapples'
-    
-    sensor_data = simulate_apple_sensor_data(prediction, pred)
-    pricing = dynamic_apple_price_engine(prediction, pred, sensor_data)
-    
-    return {
-        'prediction': prediction,
-        'confidence': pred,
-        'sensor_data': sensor_data,
-        'pricing': pricing
-    }
+    # Read image to OpenCV
+    nparr = np.frombuffer(contents, np.uint8)
+    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    if frame is None:
+        raise HTTPException(status_code=400, detail="Could not decode image")
+
+    results = yolo_model(frame, conf=0.5, device='cpu')
+    response_data = []
+
+    for result in results:
+        boxes = result.boxes.xyxy.cpu().numpy()
+        for box in boxes:
+            x1, y1, x2, y2 = map(int, box[:4])
+            apple_crop = frame[y1:y2, x1:x2]
+
+            if apple_crop.size == 0:
+                continue
+
+            apple_crop_rgb = cv2.cvtColor(apple_crop, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(apple_crop_rgb)
+
+            image_tensor = transform(pil_image).unsqueeze(0).to(device)
+            with torch.no_grad():
+                pred = model(image_tensor).item()
+                prediction = 'rottenapples' if pred > 0.8 else 'freshapples'
+
+            sensor_data = simulate_apple_sensor_data(prediction, pred)
+            pricing = dynamic_apple_price_engine(prediction, pred, sensor_data)
+
+            response_data.append({
+                "box": [x1, y1, x2, y2],
+                "prediction": prediction,
+                "confidence": pred,
+                "sensor_data": sensor_data,
+                "pricing": pricing
+            })
+
+    return {"detections": response_data}
 
 def simulate_milk_spoilage_data(sku):
     today = datetime.datetime(2025, 6, 29)  # Current date
@@ -234,32 +256,6 @@ def generate_explanation_message(spoilage_data, prediction, probability):
         f"donate if usable but not sellable, or dump if unsafe, optimizing inventory for a retail store."
     )
 
-@app.post("/predict_with_sensor")
-async def predict_with_sensor(file: UploadFile = File(...)):
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="Invalid file type. Please upload an image.")
-    
-    contents = await file.read()
-    
-    try:
-        response = requests.post(apple_predict_url, files={'file': ('image.jpg', contents, 'image/jpeg')})
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Error from predict endpoint")
-        result = response.json()
-        prediction = result['prediction']
-        confidence = result['confidence']
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Predict endpoint error: {str(e)}")
-    
-    sensor_data = simulate_apple_sensor_data(prediction, confidence)
-    pricing = dynamic_apple_price_engine(prediction, confidence, sensor_data)
-    
-    return {
-        'prediction': prediction,
-        'confidence': confidence,
-        'sensor_data': sensor_data,
-        'pricing': pricing
-    }
 
 @app.post("/predict_milk_spoilage")
 async def predict_milk_spoilage(sku: str = "whole_milk_1gal"):
