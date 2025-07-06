@@ -1,8 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import morgan from 'morgan';
 import { connectDB } from './config/database';
 import productRoutes from './routes/productRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -17,6 +19,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(morgan('dev')); // Add logging middleware
 
 // Basic route
 app.get('/api/health', (req, res) => {
@@ -25,6 +28,7 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/products', productRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Start server
 app.listen(PORT, () => {

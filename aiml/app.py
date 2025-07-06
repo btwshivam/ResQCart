@@ -8,6 +8,7 @@ from torchvision import models, transforms
 import random
 import math
 import datetime
+import os
 from ultralytics import YOLO
 
 """ well if u want to run the yolo model locally u can use the archive scripts.
@@ -22,7 +23,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-yolo_model = YOLO('models/yolo_apple.pt')
+# Check if model files exist and use appropriate paths
+yolo_model_paths = [
+    'models/trained/yolo_apple.pt',
+    'models/yolo_apple.pt'
+]
+
+yolo_model = None
+for path in yolo_model_paths:
+    if os.path.exists(path):
+        try:
+            yolo_model = YOLO(path)
+            print(f"Loaded YOLO model from: {path}")
+            break
+        except Exception as e:
+            print(f"Error loading YOLO model from {path}: {str(e)}")
+
+if yolo_model is None:
+    print("WARNING: YOLO model could not be loaded. Apple detection endpoint will not work.")
+
+# Check for CNN model paths
+cnn_model_paths = [
+    'models/trained/spoilage_cnn.pth',
+    'models/spoilage_cnn.pth'
+]
 
 model = models.resnet50(weights=None)
 model.fc = torch.nn.Sequential(
@@ -32,9 +56,22 @@ model.fc = torch.nn.Sequential(
     torch.nn.Sigmoid()
 )
 
+# Try loading the CNN model from available paths
+cnn_model_loaded = False
+for path in cnn_model_paths:
+    if os.path.exists(path):
+        try:
+            model.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
+            model.eval()
+            cnn_model_loaded = True
+            print(f"Loaded CNN model from: {path}")
+            break
+        except Exception as e:
+            print(f"Error loading CNN model from {path}: {str(e)}")
 
-model.load_state_dict(torch.load('models/spoilage_cnn.pth', map_location=torch.device('cpu')))
-model.eval()
+if not cnn_model_loaded:
+    print("WARNING: CNN model could not be loaded. Some functionality may be limited.")
+
 device = torch.device('cpu')
 model = model.to(device)
 
@@ -102,6 +139,9 @@ def dynamic_apple_price_engine(prediction, confidence, sensor_data):
 
 @app.post("/detect")
 async def detect_apples(file: UploadFile = File(...)):
+    if yolo_model is None:
+        raise HTTPException(status_code=503, detail="YOLO model not available. Please check server logs.")
+        
     if not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="Invalid file type. Please upload an image.")
     
@@ -274,4 +314,18 @@ async def predict_milk_spoilage(sku: str = "whole_milk_1gal"):
         'probability': probability,
         'pricing': pricing,
         'explanation': explanation
+    }
+
+@app.get("/")
+async def root():
+    return {
+        "message": "ResQCart API is running",
+        "endpoints": {
+            "/detect": "POST - Upload an image to detect and analyze apples",
+            "/predict_milk_spoilage": "POST - Analyze milk spoilage based on SKU"
+        },
+        "status": {
+            "yolo_model_loaded": yolo_model is not None,
+            "cnn_model_loaded": cnn_model_loaded
+        }
     }

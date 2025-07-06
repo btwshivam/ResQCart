@@ -76,4 +76,35 @@ export const productApi = {
     api.post(`/products/${id}/price-reduction`, { discountPercentage }),
 };
 
-export default api; 
+// Dashboard API endpoints
+export const dashboardApi = {
+  // Get dashboard statistics
+  getStats: () => api.get('/dashboard/stats'),
+  
+  // Get AI predictions
+  getPredictions: () => api.get('/dashboard/predictions'),
+  
+  // Get impact metrics
+  getImpactMetrics: () => api.get('/dashboard/impact'),
+};
+
+// AI/ML API endpoints
+export const aimlApi = {
+  // Detect food items in image
+  detectItems: (formData: FormData) => 
+    axios.post('http://localhost:8000/detect', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+  
+  // Predict milk spoilage
+  predictMilkSpoilage: (sku: string) => 
+    axios.post(`http://localhost:8000/predict_milk_spoilage?sku=${sku}`),
+    
+  // Get AIML service status
+  getStatus: () => 
+    axios.get('http://localhost:8000/'),
+};
+
+export default api;
