@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AdminDashboard, AIInsightsCard, CategoryDistributionCard } from './components/dashboard';
+import VideoPrediction from './components/VideoPrediction';
 import './App.css';
 
 function App() {
@@ -14,7 +15,7 @@ function App() {
               <h1 className="text-2xl font-bold text-indigo-600">ResQCart</h1>
             </div>
             <nav className="hidden md:flex space-x-8">
-              {['dashboard', 'predictions', 'rescue', 'analytics'].map((tab) => (
+              {['dashboard', 'predictions', 'video', 'rescue', 'analytics'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -53,6 +54,8 @@ function App() {
               </div>
             </div>
           )}
+          
+          {activeTab === 'video' && <VideoPrediction />}
           
           {activeTab === 'rescue' && (
             <div className="px-4 py-6 sm:px-0">

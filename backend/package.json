@@ -20,13 +20,15 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@types/ws": "^8.18.1",
     "axios": "^1.6.7",
     "cors": "^2.8.5",
     "date-fns": "^3.3.1",
     "dotenv": "^16.3.1",
     "express": "^5.1.0",
     "mongoose": "^8.0.2",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

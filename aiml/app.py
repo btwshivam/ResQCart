@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import torch
@@ -9,7 +9,10 @@ import random
 import math
 import datetime
 import os
+import base64
+import json
 from ultralytics import YOLO
+from typing import List
 
 """ well if u want to run the yolo model locally u can use the archive scripts.
     Here the yolo model is added in same fastapi for integrating it with frontend.
@@ -22,6 +25,31 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# WebSocket connection manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except:
+                # Remove disconnected clients
+                self.active_connections.remove(connection)
+
+manager = ConnectionManager()
 
 # Check if model files exist and use appropriate paths
 yolo_model_paths = [
@@ -322,10 +350,142 @@ async def root():
         "message": "ResQCart API is running",
         "endpoints": {
             "/detect": "POST - Upload an image to detect and analyze apples",
-            "/predict_milk_spoilage": "POST - Analyze milk spoilage based on SKU"
+            "/predict_milk_spoilage": "POST - Analyze milk spoilage based on SKU",
+            "/ws/video": "WebSocket - Real-time video prediction"
         },
         "status": {
             "yolo_model_loaded": yolo_model is not None,
             "cnn_model_loaded": cnn_model_loaded
         }
     }
+
+@app.websocket("/ws/video")
+async def websocket_video_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Receive base64 encoded frame from client
+            data = await websocket.receive_text()
+            frame_data = json.loads(data)
+            
+            if frame_data.get("type") == "frame":
+                # Decode base64 frame
+                frame_bytes = base64.b64decode(frame_data["frame"])
+                nparr = np.frombuffer(frame_bytes, np.uint8)
+                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                print(f"Received frame: shape={frame.shape if frame is not None else None}, dtype={frame.dtype if frame is not None else None}")
+                
+                if frame is not None and yolo_model is not None:
+                    # Resize frame to 640x640 for YOLO
+                    frame_resized = cv2.resize(frame, (640, 640))
+                    # (Optional) Convert to RGB if your YOLO model expects RGB
+                    # frame_resized = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+                    results = yolo_model(frame_resized, conf=0.2, device='cpu')
+                    print(f"YOLO results: {results}")
+                    detections = []
+                    
+                    for result in results:
+                        boxes = result.boxes.xyxy.cpu().numpy()
+                        confidences = result.boxes.conf.cpu().numpy()
+                        class_ids = result.boxes.cls.cpu().numpy()
+                        
+                        for i, box in enumerate(boxes):
+                            x1, y1, x2, y2 = map(int, box[:4])
+                            confidence = float(confidences[i])
+                            class_id = int(class_ids[i])
+                            
+                            # Get class name (assuming apple detection)
+                            class_name = "apple" if class_id == 0 else f"object_{class_id}"
+                            
+                            # Crop detected object for further analysis
+                            if x2 > x1 and y2 > y1:
+                                object_crop = frame[y1:y2, x1:x2]
+                                if object_crop.size > 0:
+                                    object_crop_rgb = cv2.cvtColor(object_crop, cv2.COLOR_BGR2RGB)
+                                    pil_image = Image.fromarray(object_crop_rgb)
+                                    
+                                    # Analyze with CNN if available
+                                    if cnn_model_loaded:
+                                        try:
+                                            image_tensor = transform(pil_image).unsqueeze(0).to(device)
+                                            with torch.no_grad():
+                                                pred = model(image_tensor).item()
+                                                prediction = 'rotten' if pred > 0.8 else 'fresh'
+                                        except:
+                                            prediction = 'unknown'
+                                    else:
+                                        prediction = 'unknown'
+                                    
+                                    detections.append({
+                                        "box": [x1, y1, x2, y2],
+                                        "class": class_name,
+                                        "confidence": confidence,
+                                        "prediction": prediction,
+                                        "timestamp": datetime.datetime.now().isoformat()
+                                    })
+                    
+                    # Send results back to client
+                    response = {
+                        "type": "detection_results",
+                        "detections": detections,
+                        "frame_count": frame_data.get("frame_count", 0),
+                        "timestamp": datetime.datetime.now().isoformat()
+                    }
+                    
+                    await manager.send_personal_message(json.dumps(response), websocket)
+            
+            elif frame_data.get("type") == "ping":
+                # Keep connection alive
+                await manager.send_personal_message(json.dumps({"type": "pong"}), websocket)
+                
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception as e:
+        print(f"WebSocket error: {str(e)}")
+        manager.disconnect(websocket)
+
+@app.post("/process_video_frame")
+async def process_video_frame(frame_data: dict):
+    """Alternative HTTP endpoint for video frame processing"""
+    if yolo_model is None:
+        raise HTTPException(status_code=503, detail="YOLO model not available")
+    
+    try:
+        # Decode base64 frame
+        frame_bytes = base64.b64decode(frame_data["frame"])
+        nparr = np.frombuffer(frame_bytes, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if frame is None:
+            raise HTTPException(status_code=400, detail="Could not decode frame")
+        
+        # Process with YOLO
+        results = yolo_model(frame, conf=0.5, device='cpu')
+        detections = []
+        
+        for result in results:
+            boxes = result.boxes.xyxy.cpu().numpy()
+            confidences = result.boxes.conf.cpu().numpy()
+            class_ids = result.boxes.cls.cpu().numpy()
+            
+            for i, box in enumerate(boxes):
+                x1, y1, x2, y2 = map(int, box[:4])
+                confidence = float(confidences[i])
+                class_id = int(class_ids[i])
+                class_name = "apple" if class_id == 0 else f"object_{class_id}"
+                
+                detections.append({
+                    "box": [x1, y1, x2, y2],
+                    "class": class_name,
+                    "confidence": confidence,
+                    "timestamp": datetime.datetime.now().isoformat()
+                })
+        
+        return {
+            "detections": detections,
+            "frame_count": frame_data.get("frame_count", 0),
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
