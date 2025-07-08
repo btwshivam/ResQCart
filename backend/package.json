@@ -9,7 +9,9 @@
     "build": "tsc",
     "test": "jest",
     "lint": "eslint --fix src/**/*.ts",
-    "seed": "ts-node src/scripts/seed.ts"
+    "seed": "ts-node src/scripts/seed.ts",
+    "bot": "ts-node src/whatsapp_bot/bot.ts",
+    "bot:setup": "ts-node src/whatsapp_bot/setup.ts"
   },
   "keywords": [
     "food-waste",
@@ -28,7 +30,9 @@
     "express": "^5.1.0",
     "mongoose": "^8.0.2",
     "morgan": "^1.10.0",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "twilio": "^4.19.0",
+    "body-parser": "^1.20.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
