@@ -8,10 +8,7 @@
     "dev": "nodemon --exec ts-node src/server.ts",
     "build": "tsc",
     "test": "jest",
-    "lint": "eslint --fix src/**/*.ts",
-    "seed": "ts-node src/scripts/seed.ts",
-    "bot": "ts-node src/whatsapp_bot/bot.ts",
-    "bot:setup": "ts-node src/whatsapp_bot/setup.ts"
+    "lint": "eslint --fix src/**/*.ts"
   },
   "keywords": [
     "food-waste",
@@ -22,23 +19,19 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@types/ws": "^8.18.1",
-    "axios": "^1.6.7",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
-    "date-fns": "^3.3.1",
     "dotenv": "^16.3.1",
     "express": "^5.1.0",
-    "mongoose": "^8.0.2",
-    "morgan": "^1.10.0",
-    "ws": "^8.18.3",
-    "twilio": "^4.19.0",
-    "body-parser": "^1.20.2"
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.3",
     "@types/jest": "^29.5.11",
-    "@types/morgan": "^1.9.9",
     "@types/node": "^24.0.4",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
