@@ -5,12 +5,19 @@ import torch
 import numpy as np
 import cv2
 from torchvision import models, transforms
-import io
 import random
 import math
 import datetime
 from ultralytics import YOLO
 import hashlib 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 app = FastAPI()
 yolo_model = YOLO('models/yolo_apple.pt')
