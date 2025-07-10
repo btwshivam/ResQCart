@@ -13,6 +13,10 @@ import base64
 import json
 import hashlib
 from typing import List
+import hashlib 
+from pydantic import BaseModel
+import os, requests
+from dotenv import load_dotenv
 
 from ultralytics import YOLO
 
@@ -547,3 +551,70 @@ async def process_video_frame(frame_data: dict):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+
+""" for resq cart -> route optimization to nearby ngo's"""
+
+load_dotenv()
+API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+if not API_KEY:
+    raise RuntimeError("Set GOOGLE_MAPS_API_KEY in .env")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class Location(BaseModel):
+    lat: float
+    lng: float
+
+class RouteRequest(BaseModel):
+    origin_lat: float
+    origin_lng: float
+    dest_lat: float
+    dest_lng: float
+
+@app.post("/nearby-ngos")
+def nearby_ngos(loc: Location):
+    url = (
+        f"https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+        f"?location={loc.lat},{loc.lng}"
+        f"&radius=15000"
+        f"&keyword=food+bank|charity|ngo"
+        f"&key={API_KEY}"
+    )
+    res = requests.get(url).json()
+    if res.get("status") != "OK":
+        raise HTTPException(400, res.get("error_message", "Places API error"))
+    ngos = []
+    for p in res["results"]:
+        ngos.append({
+            "name": p["name"],
+            "address": p.get("vicinity", ""),
+            "lat": p["geometry"]["location"]["lat"],
+            "lng": p["geometry"]["location"]["lng"],
+            "place_id": p["place_id"]
+        })
+    return {"ngos": ngos}
+
+@app.post("/route")
+def get_route(req: RouteRequest):
+    url = (
+        f"https://maps.googleapis.com/maps/api/directions/json"
+        f"?origin={req.origin_lat},{req.origin_lng}"
+        f"&destination={req.dest_lat},{req.dest_lng}"
+        f"&key={API_KEY}"
+    )
+    res = requests.get(url).json()
+    if res.get("status") != "OK":
+        raise HTTPException(400, res.get("error_message", "Directions API error"))
+    route = res["routes"][0]
+    overview_polyline = route["overview_polyline"]["points"]
+    steps = [{
+        "distance": s["distance"]["text"],
+        "duration": s["duration"]["text"],
+        "instruction": s["html_instructions"]
+    } for leg in route["legs"] for s in leg["steps"]]
+    return {"polyline": overview_polyline, "steps": steps}
