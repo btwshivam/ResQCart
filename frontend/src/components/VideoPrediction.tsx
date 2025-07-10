@@ -64,13 +64,18 @@ const VideoPrediction: React.FC = () => {
       
       ws.onmessage = (event) => {
         try {
-          const data: DetectionResults = JSON.parse(event.data);
+          const data = JSON.parse(event.data);
           if (data.type === 'detection_results') {
             setDetections(data.detections);
             setFrameCount(data.frame_count);
+            setError(null); // Clear any previous errors
+          } else if (data.type === 'error') {
+            console.error('Server error:', data.message);
+            setError(`Server error: ${data.message}`);
           }
         } catch (err) {
           console.error('Error parsing WebSocket message:', err);
+          setError('Error parsing server response');
         }
       };
       
@@ -152,6 +157,13 @@ const VideoPrediction: React.FC = () => {
       if (websocketRef.current?.readyState === WebSocket.OPEN) {
         websocketRef.current.send(JSON.stringify(message));
         frameCountRef.current++;
+        
+        // Log every 30 frames for debugging
+        if (frameCountRef.current % 30 === 0) {
+          console.log(`Sent frame ${frameCountRef.current}, frame size: ${base64Data.length} chars`);
+        }
+      } else {
+        console.warn('WebSocket not open, frame not sent');
       }
       
       // Calculate FPS
