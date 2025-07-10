@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Interactive Dashboard — Heatmap & 3D Scatter</title>
+  <script src="https://cdn.plot.ly/plotly-2.31.1.min.js"></script>
+  <style>
+    body { margin:0; font-family:Arial, sans-serif; background:#f5f5f5; }
+    h2 { text-align:center; padding:20px 0; color:#333; }
+    .chart-container {
+      width:90%; margin:20px auto; position:relative;
+      background:white; box-shadow:0 2px 8px rgba(0,0,0,0.1); border-radius:8px; padding:10px;
+    }
+    #heatmap, #scatter3d { width:100%; height:500px; }
+    .info-card {
+      position:absolute; top:20px; right:20px;
+      width:250px; background:#fff; border-radius:8px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.15);
+      padding:15px; display:none; z-index:10;
+    }
+    .info-card h3 { margin:0 0 10px; font-size:16px; }
+    .info-card p { margin:5px 0; font-size:14px; }
+    .close-btn {
+      position:absolute; top:8px; right:8px;
+      background:#e74c3c; color:white; border:none; border-radius:50%;
+      width:20px; height:20px; line-height:20px; text-align:center;
+      cursor:pointer; font-size:12px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>📊 2D Heatmap — Spoilage by Store & Category</h2>
+  <div class="chart-container">
+    <div id="heatmap"></div>
+    <div class="info-card" id="heatmap-card">
+      <button class="close-btn" onclick="toggleCard('heatmap-card')">×</button>
+      <h3 id="hm-store"></h3>
+      <p><strong>Category:</strong> <span id="hm-cat"></span></p>
+      <p><strong>Spoilage:</strong> <span id="hm-val"></span> kg</p>
+      <p><strong>Day Recorded:</strong> <span id="hm-day"></span></p>
+    </div>
+  </div>
+
+  <h2>🚀 3D Scatter — Spoilage Hotspots Over Time</h2>
+  <div class="chart-container">
+    <div id="scatter3d"></div>
+    <div class="info-card" id="scatter-card" style="background:#2c3e50; color:#ecf0f1;">
+      <button class="close-btn" onclick="toggleCard('scatter-card')">×</button>
+      <h3 id="sc-store"></h3>
+      <p><strong>Category:</strong> <span id="sc-cat"></span></p>
+      <p><strong>Spoilage:</strong> <span id="sc-val"></span> kg</p>
+      <p><strong>Day:</strong> <span id="sc-day"></span></p>
+    </div>
+  </div>
+
+<script>
+// ---- 1) 2D Heatmap Setup ----
+const stores = ["Store A","Store B","Store C","Store D","Store E"];
+const categories = ["Fruits","Dairy","Vegetables","Meat","Bakery"];
+// simulate day of record for extra context
+const dayMatrix = [
+  [1,1,2,2,1],
+  [1,2,1,2,1],
+  [2,1,2,1,2],
+  [1,1,1,2,2],
+  [2,2,1,1,1]
+];
+// random-ish spoilage values
+const zData = [
+  [50,80,30,90,60],
+  [40,70,20,80,50],
+  [30,60,10,70,40],
+  [20,50,5,60,30],
+  [10,40,0,50,20]
+];
+
+Plotly.newPlot('heatmap',[{
+  z: zData,
+  x: categories,
+  y: stores,
+  type: 'heatmap',
+  colorscale: 'YlOrRd',
+  hoverinfo: 'none',
+}],{
+  margin:{t:30,b:50,l:80,r:20},
+  xaxis:{title:'Category'},
+  yaxis:{title:'Store', automargin:true},
+  dragmode:'zoom'
+});
+
+const hmDiv = document.getElementById('heatmap');
+hmDiv.on('plotly_click', data => {
+  const pt = data.points[0];
+  const store = pt.y, cat = pt.x, val = pt.z;
+  const day = dayMatrix[stores.indexOf(store)][categories.indexOf(cat)];
+  document.getElementById('hm-store').innerText = store;
+  document.getElementById('hm-cat').innerText   = cat;
+  document.getElementById('hm-val').innerText   = val;
+  document.getElementById('hm-day').innerText   = "Day " + day;
+  toggleCard('heatmap-card', true);
+});
+
+// ---- 2) 3D Scatter Setup ----
+const scatterData = [
+  { store:"Store A", day:1, spoilage:50, category:"Fruits" },
+  { store:"Store B", day:1, spoilage:80, category:"Dairy" },
+  { store:"Store C", day:1, spoilage:30, category:"Vegetables" },
+  { store:"Store D", day:1, spoilage:90, category:"Meat" },
+  { store:"Store E", day:1, spoilage:60, category:"Bakery" },
+  { store:"Store A", day:2, spoilage:40, category:"Fruits" },
+  { store:"Store B", day:2, spoilage:70, category:"Dairy" },
+  { store:"Store C", day:2, spoilage:20, category:"Vegetables" },
+  { store:"Store D", day:2, spoilage:60, category:"Meat" },
+  { store:"Store E", day:2, spoilage:50, category:"Bakery" }
+];
+const catColors = { Fruits:'green', Dairy:'blue', Vegetables:'orange', Meat:'red', Bakery:'purple' };
+
+Plotly.newPlot('scatter3d',[{
+  x: scatterData.map(d=>stores.indexOf(d.store)+1),
+  y: scatterData.map(d=>d.day),
+  z: scatterData.map(d=>d.spoilage),
+  mode: 'markers',
+  type: 'scatter3d',
+  marker:{
+    size:8,
+    color: scatterData.map(d=>catColors[d.category]),
+    opacity:0.9
+  },
+  text: scatterData.map(d=>d.store),
+  hovertemplate: 'Store: %{text}<br>Day: %{y}<br>Spoilage: %{z} kg<extra></extra>'
+}],{
+  paper_bgcolor:'#1e1e1e', plot_bgcolor:'#1e1e1e',
+  margin:{t:30,b:50,l:50,r:50},
+  scene:{
+    xaxis:{title:'Store ID', tickvals:[1,2,3,4,5], ticktext:stores, color:'#ddd'},
+    yaxis:{title:'Day', color:'#ddd'},
+    zaxis:{title:'Spoilage (kg)', color:'#ddd'},
+    bgcolor:'#1e1e1e'
+  }
+});
+
+const scDiv = document.getElementById('scatter3d');
+scDiv.on('plotly_click', data => {
+  const pt = data.points[0];
+  const idx = pt.pointIndex;
+  const d = scatterData[idx];
+  document.getElementById('sc-store').innerText = d.store;
+  document.getElementById('sc-cat').innerText   = d.category;
+  document.getElementById('sc-val').innerText   = d.spoilage;
+  document.getElementById('sc-day').innerText   = "Day " + d.day;
+  toggleCard('scatter-card', true);
+});
+
+// ---- Card toggle helper ----
+function toggleCard(id, show=false) {
+  const card = document.getElementById(id);
+  card.style.display = (show||card.style.display==='none') ? 'block' : 'none';
+}
+</script>
+
+</body>
+</html>
