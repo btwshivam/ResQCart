@@ -92,7 +92,7 @@ export const dashboardApi = {
 export const aimlApi = {
   // Detect food items in image
   detectItems: (formData: FormData) => 
-    axios.post('http://localhost:8000/detect', formData, {
+    axios.post('/aiml/detect', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -100,11 +100,11 @@ export const aimlApi = {
   
   // Predict milk spoilage
   predictMilkSpoilage: (sku: string) => 
-    axios.post(`http://localhost:8000/predict_milk_spoilage?sku=${sku}`),
+    axios.post(`/aiml/predict_milk_spoilage?sku=${sku}`),
     
   // Get AIML service status
   getStatus: () => 
-    axios.get('http://localhost:8000/'),
+    axios.get('/aiml/'),
 };
 
 export default api;

@@ -8,12 +8,6 @@ interface Detection {
   timestamp: string;
 }
 
-interface DetectionResults {
-  type: string;
-  detections: Detection[];
-  frame_count: number;
-  timestamp: string;
-}
 
 const VideoPrediction: React.FC = () => {
   const [isStreaming, setIsStreaming] = useState(false);

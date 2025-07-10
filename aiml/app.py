@@ -220,7 +220,7 @@ async def detect_apples(file: UploadFile = File(...)):
                 pred = model(image_tensor).item()
                 prediction = 'rottenapples' if pred > 0.8 else 'freshapples'
 
-            sensor_data = simulate_apple_sensor_data(prediction, pred)
+            sensor_data = simulate_apple_sensor_data(prediction, pred, box)
             pricing = dynamic_apple_price_engine(prediction, pred, sensor_data)
 
             response_data.append({
