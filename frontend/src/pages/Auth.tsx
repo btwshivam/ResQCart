@@ -21,13 +21,6 @@ const roleOptions: { value: UserRole; label: string; description: string; icon: 
     description: 'Help distribute surplus food to those in need',
     icon: '🚚',
     color: 'from-blue-500 to-indigo-500'
-  },
-  {
-    value: 'admin',
-    label: 'Platform Admin',
-    description: 'Oversee and optimize the food waste prevention network',
-    icon: '⚡',
-    color: 'from-purple-500 to-pink-500'
   }
 ];
 
@@ -70,7 +63,7 @@ export default function Auth() {
         : await authService.register(data);
       
       toast.success(response.message);
-      navigate(`/${selectedRole}-dashboard`);
+      navigate('/dashboard');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'An error occurred');
     } finally {

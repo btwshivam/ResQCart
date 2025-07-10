@@ -1,9 +1,11 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Auth from './pages/Auth';
-import DashboardLayout from './components/DashboardLayout';
 import { authService } from './services/auth.service';
+import { AdminDashboard, AIInsightsCard, CategoryDistributionCard } from './components/dashboard';
+import VideoPrediction from './components/VideoPrediction';
+import './App.css';
 
 // Protected Route component
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactElement, allowedRoles: string[] }) => {
@@ -14,72 +16,104 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactEleme
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
-  return <DashboardLayout>{children}</DashboardLayout>;
+  return children;
 };
 
-// Placeholder dashboard components
-const UserDashboard = () => (
-  <div className="bg-white shadow rounded-lg p-6">
-    <h2 className="text-2xl font-bold mb-4">User Dashboard</h2>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div className="bg-blue-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">My Donations</h3>
-        <p className="text-gray-600">Track and manage your food donations</p>
-      </div>
-      <div className="bg-green-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">Impact</h3>
-        <p className="text-gray-600">See the impact of your contributions</p>
-      </div>
-      <div className="bg-purple-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">Notifications</h3>
-        <p className="text-gray-600">Stay updated on rescue activities</p>
-      </div>
-    </div>
-  </div>
-);
+// Dashboard Container with Tabs
+const DashboardContainer = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const navigate = useNavigate();
+  const user = authService.getCurrentUser();
 
-const RescueDashboard = () => (
-  <div className="bg-white shadow rounded-lg p-6">
-    <h2 className="text-2xl font-bold mb-4">Rescue Dashboard</h2>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div className="bg-yellow-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">Active Rescues</h3>
-        <p className="text-gray-600">View and manage ongoing rescue operations</p>
-      </div>
-      <div className="bg-red-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">Route Planning</h3>
-        <p className="text-gray-600">Optimize your rescue routes</p>
-      </div>
-      <div className="bg-indigo-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">Resources</h3>
-        <p className="text-gray-600">Access rescue resources and guidelines</p>
-      </div>
-    </div>
-  </div>
-);
+  const handleLogout = () => {
+    authService.logout();
+    navigate('/auth');
+  };
 
-const AdminDashboard = () => (
-  <div className="bg-white shadow rounded-lg p-6">
-    <h2 className="text-2xl font-bold mb-4">Admin Dashboard</h2>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div className="bg-pink-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">User Management</h3>
-        <p className="text-gray-600">Manage users and permissions</p>
-      </div>
-      <div className="bg-orange-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">Analytics</h3>
-        <p className="text-gray-600">Platform statistics and insights</p>
-      </div>
-      <div className="bg-teal-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">System Settings</h3>
-        <p className="text-gray-600">Configure platform settings</p>
-      </div>
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex-shrink-0 flex items-center">
+              <h1 className="text-2xl font-bold text-indigo-600">ResQCart</h1>
+            </div>
+            <nav className="hidden md:flex space-x-8">
+              {['dashboard', 'predictions', 'video', 'rescue', 'analytics'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-3 py-2 text-sm font-medium rounded-md ${
+                    activeTab === tab
+                      ? 'bg-indigo-50 text-indigo-600'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </nav>
+            <div className="flex items-center">
+              <span className="mr-4 text-sm text-gray-600">Welcome, {user?.firstName}</span>
+              <button 
+                onClick={handleLogout}
+                className="ml-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-grow">
+        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          {activeTab === 'dashboard' && <AdminDashboard />}
+          
+          {activeTab === 'predictions' && (
+            <div className="px-4 py-6 sm:px-0">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <AIInsightsCard />
+                <CategoryDistributionCard />
+              </div>
+              <div className="mt-6">
+                <h2 className="text-2xl font-semibold text-gray-900">AI Prediction Models</h2>
+                <p className="mt-2 text-gray-600">Advanced machine learning models to predict product spoilage and optimize inventory.</p>
+              </div>
+            </div>
+          )}
+          
+          {activeTab === 'video' && <VideoPrediction />}
+          
+          {activeTab === 'rescue' && (
+            <div className="px-4 py-6 sm:px-0">
+              <h2 className="text-2xl font-semibold text-gray-900">Rescue Network Management</h2>
+              <p className="mt-2 text-gray-600">Food bank connections and rescue operation status will be displayed here.</p>
+            </div>
+          )}
+          
+          {activeTab === 'analytics' && (
+            <div className="px-4 py-6 sm:px-0">
+              <h2 className="text-2xl font-semibold text-gray-900">Waste Reduction Analytics</h2>
+              <p className="mt-2 text-gray-600">Performance metrics and historical data will be displayed here.</p>
+            </div>
+          )}
+        </div>
+      </main>
+      
+      <footer className="bg-white border-t border-gray-200">
+        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 md:flex md:items-center md:justify-between lg:px-8">
+          <div className="mt-8 md:mt-0 md:order-1">
+            <p className="text-center text-base text-gray-400">&copy; 2025 ResQCart: Food Waste Prediction & Rescue Network</p>
+          </div>
+        </div>
+      </footer>
     </div>
-  </div>
-);
+  );
+};
 
 function App() {
   return (
@@ -89,33 +123,16 @@ function App() {
         <Route path="/auth" element={<Auth />} />
         
         <Route
-          path="/user-dashboard"
+          path="/dashboard"
           element={
-            <ProtectedRoute allowedRoles={['user']}>
-              <UserDashboard />
-            </ProtectedRoute>
-          }
-        />
-        
-        <Route
-          path="/rescue-dashboard"
-          element={
-            <ProtectedRoute allowedRoles={['rescue']}>
-              <RescueDashboard />
-            </ProtectedRoute>
-          }
-        />
-        
-        <Route
-          path="/admin-dashboard"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdminDashboard />
+            <ProtectedRoute allowedRoles={['user', 'rescue']}>
+              <DashboardContainer />
             </ProtectedRoute>
           }
         />
         
         <Route path="/" element={<Navigate to="/auth" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Router>
   );

@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { Admin } from '../models/Admin';
 import { User } from '../models/User';
 import { RescuePersonnel } from '../models/RescuePersonnel';
 import { jwtConfig } from '../config/jwt.config';
@@ -21,14 +20,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     let newUser;
 
     switch (userType) {
-      case 'admin':
-        if (await Admin.findOne({ email: userData.email })) {
-          res.status(400).json({ message: 'Admin email already exists' });
-          return;
-        }
-        newUser = new Admin(userData);
-        break;
-
       case 'user':
         if (await User.findOne({ email: userData.email })) {
           res.status(400).json({ message: 'User email already exists' });
@@ -78,9 +69,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     let UserModel;
 
     switch (userType) {
-      case 'admin':
-        UserModel = Admin;
-        break;
       case 'user':
         UserModel = User;
         break;
