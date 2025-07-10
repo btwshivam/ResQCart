@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>NGO Finder & Route Demo</title>
+  <style>
+    #map { height: 60vh; width: 100%; margin-bottom:10px; }
+    #list { max-height: 200px; overflow-y: auto; }
+    .ngo-item { cursor:pointer; padding:5px; border-bottom:1px solid #ddd; }
+    .ngo-item:hover { background:#f0f0f0; }
+    #steps { font-size:14px; margin-top:10px; }
+    #steps li { margin-bottom:5px; }
+  </style>
+  <script src="https://maps.googleapis.com/maps/api/js?key=your_api_key&libraries=geometry,places"></script>
+</head>
+<body>
+  <h2>Find Nearby NGOs & Get Route</h2>
+  <div id="map"></div>
+  <button id="findBtn">Find Nearby NGOs</button>
+  <div id="list"></div>
+  <ul id="steps"></ul>
+
+<script>
+let map, marker, userPos, directionsPolyline;
+
+function initMap() {
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 28.6139, lng: 77.2090 },
+    zoom: 12,
+  });
+  marker = new google.maps.Marker({ map });
+  // Try to get user location
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      userPos = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude
+      };
+      map.setCenter(userPos);
+      marker.setPosition(userPos);
+    });
+  }
+}
+
+async function fetchNGOs() {
+  if (!userPos) return alert("Waiting for location…");
+  const res = await fetch("http://localhost:8000/nearby-ngos", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(userPos)
+  });
+  const { ngos } = await res.json();
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  ngos.forEach((n, i) => {
+    const div = document.createElement("div");
+    div.className = "ngo-item";
+    div.innerText = `${n.name} — ${n.address}`;
+    div.onclick = () => drawRoute(n);
+    list.appendChild(div);
+  });
+}
+
+async function drawRoute(ngo) {
+  // clear old polyline & steps
+  if (directionsPolyline) directionsPolyline.setMap(null);
+  document.getElementById("steps").innerHTML = "";
+
+  const body = {
+    origin_lat: userPos.lat,
+    origin_lng: userPos.lng,
+    dest_lat: ngo.lat,
+    dest_lng: ngo.lng
+  };
+  const res = await fetch("http://localhost:8000/route", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+  const { polyline, steps } = await res.json();
+  const path = google.maps.geometry.encoding.decodePath(polyline);
+  directionsPolyline = new google.maps.Polyline({
+    path, strokeColor:"#4285F4", strokeOpacity:0.7, strokeWeight:5
+  });
+  directionsPolyline.setMap(map);
+  map.fitBounds(path.reduce((b,p)=>b.extend(p), new google.maps.LatLngBounds()));
+
+  // show step list
+  const ul = document.getElementById("steps");
+  steps.forEach(s => {
+    const li = document.createElement("li");
+    li.innerHTML = `${s.instruction} (<strong>${s.distance}, ${s.duration}</strong>)`;
+    ul.appendChild(li);
+  });
+}
+
+window.onload = () => {
+  initMap();
+  document.getElementById("findBtn").onclick = fetchNGOs;
+};
+</script>
+</body>
+</html>

@@ -11,6 +11,13 @@ import datetime
 import os
 import base64
 import json
+import hashlib
+from typing import List
+import hashlib 
+from pydantic import BaseModel
+import os, requests
+from dotenv import load_dotenv
+
 from ultralytics import YOLO
 from typing import List
 
@@ -51,57 +58,35 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# Check if model files exist and use appropriate paths
-yolo_model_paths = [
-    'models/trained/yolo_apple.pt',
-    'models/yolo_apple.pt'
-]
-
+# Initialize models with error handling
 yolo_model = None
-for path in yolo_model_paths:
-    if os.path.exists(path):
-        try:
-            yolo_model = YOLO(path)
-            print(f"Loaded YOLO model from: {path}")
-            break
-        except Exception as e:
-            print(f"Error loading YOLO model from {path}: {str(e)}")
-
-if yolo_model is None:
-    print("WARNING: YOLO model could not be loaded. Apple detection endpoint will not work.")
-
-# Check for CNN model paths
-cnn_model_paths = [
-    'models/trained/spoilage_cnn.pth',
-    'models/spoilage_cnn.pth'
-]
-
-model = models.resnet50(weights=None)
-model.fc = torch.nn.Sequential(
-    torch.nn.Linear(model.fc.in_features, 128),
-    torch.nn.ReLU(),
-    torch.nn.Linear(128, 1),
-    torch.nn.Sigmoid()
-)
-
-# Try loading the CNN model from available paths
-cnn_model_loaded = False
-for path in cnn_model_paths:
-    if os.path.exists(path):
-        try:
-            model.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
-            model.eval()
-            cnn_model_loaded = True
-            print(f"Loaded CNN model from: {path}")
-            break
-        except Exception as e:
-            print(f"Error loading CNN model from {path}: {str(e)}")
-
-if not cnn_model_loaded:
-    print("WARNING: CNN model could not be loaded. Some functionality may be limited.")
-
+model = None
 device = torch.device('cpu')
-model = model.to(device)
+
+try:
+    print("Loading YOLO model...")
+    yolo_model = YOLO('models/trained/yolo_apple.pt')
+    print("YOLO model loaded successfully")
+except Exception as e:
+    print(f"Error loading YOLO model: {e}")
+    yolo_model = None
+
+try:
+    print("Loading CNN model...")
+    model = models.resnet50(weights=None)
+    model.fc = torch.nn.Sequential(
+        torch.nn.Linear(model.fc.in_features, 128),
+        torch.nn.ReLU(),
+        torch.nn.Linear(128, 1),
+        torch.nn.Sigmoid()
+    )
+    model.load_state_dict(torch.load('models/trained/spoilage_cnn.pth', map_location=device))
+    model.eval()
+    model = model.to(device)
+    print("CNN model loaded successfully")
+except Exception as e:
+    print(f"Error loading CNN model: {e}")
+    model = None
 
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -109,60 +94,98 @@ transform = transforms.Compose([
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
 
-def simulate_apple_sensor_data(prediction, confidence):
+def simulate_apple_sensor_data(prediction, confidence, box):
+
+    # using bounding box and prediction as seed
+    seed_str = f"{box}-{prediction}"
+    seed = int(hashlib.md5(seed_str.encode()).hexdigest(), 16) % (2**32)
+    random.seed(seed)
+
     if prediction == 'rottenapples':
-        ethylene = round(random.uniform(1.0, 10.0), 2)
-        temp = round(random.uniform(25.0, 30.0), 1)
-        humidity = round(random.uniform(70.0, 80.0), 1)
+        ethylene = round(5.0 + (confidence * 5) + random.uniform(-0.5, 0.5), 2)
+        ethylene = max(1.0, min(ethylene, 10.0))
+        temp = round(27.0 + random.uniform(-1.0, 1.0), 1)
+        humidity = round(75.0 + random.uniform(-2.0, 2.0), 1)
     else:
-        ethylene = round(random.uniform(0.1, 1.0), 2)
-        temp = round(random.uniform(20.0, 25.0), 1)
-        humidity = round(random.uniform(60.0, 70.0), 1)
+        ethylene = round(0.5 + (confidence * 0.5) + random.uniform(-0.1, 0.1), 2)
+        ethylene = max(0.1, min(ethylene, 1.5))
+        temp = round(22.0 + random.uniform(-1.0, 1.0), 1)
+        humidity = round(65.0 + random.uniform(-2.0, 2.0), 1)
+
     return {
         'ethylene_ppm': ethylene,
         'temperature_c': temp,
         'humidity_percent': humidity
     }
 
-def dynamic_apple_price_engine(prediction, confidence, sensor_data):
+def simulate_business_context():
+    """
+    Simulate daily sales, stock, and shelf life.
+    """
+    daily_sales_rate = random.choice([15,20, 30, 50, 70])
+    stock_level = random.choice([60, 85, 100, 150, 180])
+    shelf_life_days = 14
+
+    days_in_stock = random.randint(0, shelf_life_days)
+    estimated_shelf_life_days = shelf_life_days - days_in_stock
+
+    return {
+        'daily_sales_rate': daily_sales_rate,
+        'stock_level': stock_level,
+        'estimated_shelf_life_days': estimated_shelf_life_days
+    }
+
+
+def dynamic_apple_price_engine(prediction, confidence, sensor_data, daily_sales_rate=100, stock_level=500, estimated_shelf_life_days=10):
     base_price = 1.00
     ethylene = sensor_data['ethylene_ppm']
 
+    context = simulate_business_context()
+    daily_sales_rate = context['daily_sales_rate']
+    stock_level = context['stock_level']
+    estimated_shelf_life_days = context['estimated_shelf_life_days']
+
+    if daily_sales_rate == 0:
+        days_to_clear_stock = float('inf')
+    else:
+        days_to_clear_stock = stock_level / daily_sales_rate
+
     if prediction == 'freshapples':
-        discount_percent = min(ethylene * 10, 10) if ethylene >= 0.2 else 0
+        if days_to_clear_stock <= estimated_shelf_life_days:
+            discount_percent = 0
+        elif estimated_shelf_life_days < 3:
+            discount_percent = 30
+        else:
+            discount_percent = min((days_to_clear_stock - estimated_shelf_life_days) * 2, 15)
+
         price = round(base_price * (1 - discount_percent / 100), 2)
         action = 'sell'
-        message = None
-    else:
-        if confidence > 0.7:
-            if ethylene < 5.0:
-                action = 'sell'
-                discount_percent = 30
-                price = round(base_price * (1 - discount_percent / 100), 2)
-                message = None
-            elif ethylene < 10.0:
-                action = 'donate'
-                discount_percent = 0
-                price = 0.00
-                message = 'Donate to local food bank for community support.'
-            else:
-                action = 'dump'
-                discount_percent = 0
-                price = 0.00
-                message = 'Dispose of spoiled apple safely to prevent contamination.'
+        message = None if discount_percent == 0 else "Discount to boost sales"
+
+    elif prediction == 'rottenapples':
+        if ethylene < 7.0:
+            action = 'donate'
+            discount_percent = 0
+            price = 0.00
+            message = 'Slightly spoiled, donate to food bank'
         else:
-            discount_percent = 20 + (confidence - 0.5) * 100 * 0.6
-            discount_percent = min(discount_percent, 50)
-            price = round(base_price * (1 - discount_percent / 100), 2)
-            action = 'sell'
-            message = None
+            action = 'dump'
+            discount_percent = 0
+            price = 0.00
+            message = 'Dispose safely.'
+    else:
+        action = 'sell'
+        discount_percent = 0
+        price = base_price
+        message = None
 
     return {
         'action': action,
-        'discount_applied': discount_percent>0,
+        'discount_applied': discount_percent > 0,
         'discount_percent': round(discount_percent, 1),
         'price_usd': price,
-        'message': message
+        'message': message,
+        'business_context': context 
     }
 
 @app.post("/detect")
@@ -214,8 +237,15 @@ async def detect_apples(file: UploadFile = File(...)):
 
     return {"detections": response_data}
 
+def deterministic_seed_from_sku(sku: str):
+    hash_bytes = hashlib.md5(sku.encode()).digest()
+    seed = int.from_bytes(hash_bytes[:4], 'big')
+    random.seed(seed)
+
 def simulate_milk_spoilage_data(sku):
-    today = datetime.datetime(2025, 6, 29)  # Current date
+    today = datetime.datetime.today()
+    deterministic_seed_from_sku(sku)  # Seeded randomness per SKU
+
     if sku == 'whole_milk_1gal':
         shelf_life_days = random.randint(14, 21)
         days_past_expiry = random.randint(0, 14)
@@ -238,11 +268,11 @@ def simulate_milk_spoilage_data(sku):
         bacterial_load = round(random.uniform(2.0, 7.0), 2)
     else:
         raise HTTPException(status_code=400, detail="Invalid SKU")
-    
+
     production_date = today - datetime.timedelta(days=shelf_life_days + days_past_expiry)
     expiry_date = production_date + datetime.timedelta(days=shelf_life_days)
     storage_temp = round(random.uniform(0.0, 10.0), 1)
-    
+
     return {
         'sku': sku,
         'production_date': production_date.strftime('%Y-%m-%d'),
@@ -251,6 +281,22 @@ def simulate_milk_spoilage_data(sku):
         'pH': pH,
         'bacterial_load_log_cfu_ml': bacterial_load,
         'storage_temperature_c': storage_temp
+    }
+
+def simulate_milk_business_context(sku: str):
+    deterministic_seed_from_sku(sku + "biz")  # Different seed from spoilage
+    demand = random.choice(['low', 'medium', 'high'])
+    sales_rate = {
+        'low': random.randint(10, 50),
+        'medium': random.randint(50, 100),
+        'high': random.randint(100, 200)
+    }[demand]
+
+    stock_level = random.randint(100, 1000)
+    return {
+        'demand': demand,
+        'daily_sales_rate': sales_rate,
+        'stock_level': stock_level
     }
 
 def _predict_milk_spoilage(spoilage_data):
@@ -264,82 +310,88 @@ def _predict_milk_spoilage(spoilage_data):
     prediction = 'spoiled' if probability > 0.5 else 'fresh'
     return prediction, probability
 
-def dynamic_milk_price_engine(prediction, probability, spoilage_data):
-    base_price = 3.45 if spoilage_data['sku'] in ['whole_milk_1gal', 'skim_milk_1gal', 'lowfat_milk_1gal'] else 1.50
+
+def dynamic_milk_price_engine(prediction, probability, spoilage_data, context):
     sku = spoilage_data['sku']
-    
-    if prediction == 'fresh':
-        days_threshold = 2 if sku == 'whole_milk_1gal' else 5
-        discount_percent = min(spoilage_data['days_past_expiry'] * 2, 10) if spoilage_data['days_past_expiry'] >= days_threshold else 0
-        price = round(base_price * (1 - discount_percent / 100), 2)
-        action = 'sell'
-        discount_applied = discount_percent > 0
-        message = None
-    else:
-        pH_threshold = 5.0 if sku == 'whole_milk_1gal' else 5.5
-        bacterial_threshold = 9.0 if sku == 'whole_milk_1gal' else 8.0
-        if probability > 0.7 and spoilage_data['pH'] < pH_threshold:
-            if spoilage_data['bacterial_load_log_cfu_ml'] < bacterial_threshold:
-                action = 'donate'
-                message = 'Donate to local food bank for community support, as milk is still usable for immediate consumption.'
-                price = 0.00
-                discount_applied = False
-                discount_percent = 0
-            else:
-                action = 'dump'
-                message = 'Dispose of spoiled milk safely to prevent health risks due to high bacterial contamination.'
-                price = 0.00
-                discount_applied = False
-                discount_percent = 0
-        else:
-            discount_percent = 20 + (probability - 0.5) * 100 * 0.6
-            discount_percent = min(discount_percent, 50)
-            price = round(base_price * (1 - discount_percent / 100), 2)
-            action = 'sell'
-            discount_applied = True
-            message = None
+    base_price = 3.45 if sku in ['whole_milk_1gal', 'skim_milk_1gal', 'lowfat_milk_1gal'] else 1.50
+
+    stock = context['stock_level']
+    sales = context['daily_sales_rate']
+    shelf_life_left = max(0, 10 - spoilage_data['days_past_expiry'])  # fallback in case days_past_expiry is used differently
+    days_to_expiry = max(0, (datetime.datetime.strptime(spoilage_data['expiry_date'], "%Y-%m-%d") - datetime.datetime.now()).days)
+
+    pH_threshold = 5.0 if sku == 'whole_milk_1gal' else 5.5
+    bacteria_threshold = 9.0 if sku == 'whole_milk_1gal' else 8.0
+
+    # Always enforce expiry first
+    if spoilage_data['days_past_expiry'] > 0 or days_to_expiry <= 0:
+        return {
+            'action': 'dump',
+            'discount_applied': False,
+            'discount_percent': 0,
+            'price_usd': 0.0,
+            'message': 'Expired product. Must be dumped per food safety law.',
+            'business_context': context
+        }
+
+    # If predicted spoiled or bad sensor data → dump
+    if prediction == 'spoiled' or spoilage_data['pH'] < pH_threshold or spoilage_data['bacterial_load_log_cfu_ml'] > bacteria_threshold:
+        return {
+            'action': 'dump',
+            'discount_applied': False,
+            'discount_percent': 0,
+            'price_usd': 0.0,
+            'message': 'Unsafe spoilage risk. Must dump.',
+            'business_context': context
+        }
+
+    # If near expiry and stock is very high → donate some
+    if days_to_expiry <= 2 and stock > sales * 2:
+        return {
+            'action': 'donate',
+            'discount_applied': False,
+            'discount_percent': 0,
+            'price_usd': 0.0,
+            'message': 'Near expiry with surplus stock. Donate portion to community.',
+            'business_context': context
+        }
+
+    # Otherwise, safe to sell at full price
     return {
-        'action': action,
-        'discount_applied': discount_applied,
-        'discount_percent': round(discount_percent, 1),
-        'price_usd': price,
-        'message': message
+        'action': 'sell',
+        'discount_applied': False,
+        'discount_percent': 0,
+        'price_usd': base_price,
+        'message': 'Product safe. Sell at full price.',
+        'business_context': context
     }
 
 def generate_explanation_message(spoilage_data, prediction, probability):
-    pH = spoilage_data['pH']
-    days = spoilage_data['days_past_expiry']
-    bacterial_load = spoilage_data['bacterial_load_log_cfu_ml']
-    temp = spoilage_data['storage_temperature_c']
-    sku = spoilage_data['sku']
-    expiry_date = spoilage_data['expiry_date']
     return (
-        f"The spoilage prediction for {sku} was determined using a logistic regression model, "
-        f"P(spoiled) = 1 / (1 + e^-(0.5*days + (-1.0)*pH + 0.8*bacterial_load - 5.0)), "
-        f"based on research indicating pH, bacterial load, and days past expiry as key spoilage indicators "
-        f"([ResearchGate: Screening of Bacteria Responsible for Milk Spoilage]). "
-        f"For this sample, pH={pH}, days past expiry={days}, and bacterial load={bacterial_load} log CFU/mL "
-        f"yielded a spoilage probability of {probability:.2f}. Storage at {temp}°C and expiry date {expiry_date} "
-        f"were considered. The prediction '{prediction}' guides the action: sell with a discount for mildly spoiled milk, "
-        f"donate if usable but not sellable, or dump if unsafe, optimizing inventory for a retail store."
+        f"The prediction for {spoilage_data['sku']} was calculated using a logistic regression model "
+        f"based on spoilage indicators: pH={spoilage_data['pH']}, days past expiry={spoilage_data['days_past_expiry']}, "
+        f"and bacterial load={spoilage_data['bacterial_load_log_cfu_ml']} log CFU/mL. "
+        f"Probability of spoilage: {probability:.2f}. Storage temp: {spoilage_data['storage_temperature_c']}°C. "
+        f"Recommended action: '{prediction.upper()}' based on predicted safety and shelf risk."
     )
 
 
 @app.post("/predict_milk_spoilage")
 async def predict_milk_spoilage(sku: str = "whole_milk_1gal"):
     if sku not in ['whole_milk_1gal', 'skim_milk_1gal', 'lowfat_milk_1gal', 'uht_milk_1qt']:
-        raise HTTPException(status_code=400, detail="Invalid SKU. Choose from: whole_milk_1gal, skim_milk_1gal, lowfat_milk_1gal, uht_milk_1qt")
-    
+        raise HTTPException(status_code=400, detail="Invalid SKU.")
+
     spoilage_data = simulate_milk_spoilage_data(sku)
     prediction, probability = _predict_milk_spoilage(spoilage_data)
-    pricing = dynamic_milk_price_engine(prediction, probability, spoilage_data)
+    context = simulate_milk_business_context(sku)
+    pricing = dynamic_milk_price_engine(prediction, probability, spoilage_data, context)
     explanation = generate_explanation_message(spoilage_data, prediction, probability)
-    
+
     return {
         'sku': sku,
         'spoilage_data': spoilage_data,
         'prediction': prediction,
-        'probability': probability,
+        'probability': round(probability, 3),
         'pricing': pricing,
         'explanation': explanation
     }
@@ -355,7 +407,7 @@ async def root():
         },
         "status": {
             "yolo_model_loaded": yolo_model is not None,
-            "cnn_model_loaded": cnn_model_loaded
+            "cnn_model_loaded": model is not None
         }
     }
 
@@ -375,64 +427,78 @@ async def websocket_video_endpoint(websocket: WebSocket):
                 frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 print(f"Received frame: shape={frame.shape if frame is not None else None}, dtype={frame.dtype if frame is not None else None}")
                 
-                if frame is not None and yolo_model is not None:
+                if frame is not None:
+                    if yolo_model is None:
+                        print("YOLO model not available")
+                        await manager.send_personal_message(json.dumps({
+                            "type": "error",
+                            "message": "YOLO model not available"
+                        }), websocket)
+                        continue
+                        
                     # Resize frame to 640x640 for YOLO
                     frame_resized = cv2.resize(frame, (640, 640))
                     # (Optional) Convert to RGB if your YOLO model expects RGB
-                    # frame_resized = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
-                    results = yolo_model(frame_resized, conf=0.2, device='cpu')
-                    print(f"YOLO results: {results}")
-                    detections = []
+                    frame_resized = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
                     
-                    for result in results:
-                        boxes = result.boxes.xyxy.cpu().numpy()
-                        confidences = result.boxes.conf.cpu().numpy()
-                        class_ids = result.boxes.cls.cpu().numpy()
+                    try:
+                        results = yolo_model(frame_resized, conf=0.2, device='cpu')
+                        print(f"YOLO results: {len(results)} detections")
+                        detections = []
                         
-                        for i, box in enumerate(boxes):
-                            x1, y1, x2, y2 = map(int, box[:4])
-                            confidence = float(confidences[i])
-                            class_id = int(class_ids[i])
+                        for result in results:
+                            boxes = result.boxes.xyxy.cpu().numpy()
+                            confidences = result.boxes.conf.cpu().numpy()
+                            class_ids = result.boxes.cls.cpu().numpy()
                             
-                            # Get class name (assuming apple detection)
-                            class_name = "apple" if class_id == 0 else f"object_{class_id}"
-                            
-                            # Crop detected object for further analysis
-                            if x2 > x1 and y2 > y1:
-                                object_crop = frame[y1:y2, x1:x2]
-                                if object_crop.size > 0:
-                                    object_crop_rgb = cv2.cvtColor(object_crop, cv2.COLOR_BGR2RGB)
-                                    pil_image = Image.fromarray(object_crop_rgb)
-                                    
-                                    # Analyze with CNN if available
-                                    if cnn_model_loaded:
+                            for i, box in enumerate(boxes):
+                                x1, y1, x2, y2 = map(int, box[:4])
+                                confidence = float(confidences[i])
+                                class_id = int(class_ids[i])
+                                
+                                # Get class name (assuming apple detection)
+                                class_name = "apple" if class_id == 0 else f"object_{class_id}"
+                                
+                                # Crop detected object for further analysis
+                                if x2 > x1 and y2 > y1:
+                                    object_crop = frame[y1:y2, x1:x2]
+                                    if object_crop.size > 0:
+                                        object_crop_rgb = cv2.cvtColor(object_crop, cv2.COLOR_BGR2RGB)
+                                        pil_image = Image.fromarray(object_crop_rgb)
+                                        
                                         try:
                                             image_tensor = transform(pil_image).unsqueeze(0).to(device)
                                             with torch.no_grad():
                                                 pred = model(image_tensor).item()
                                                 prediction = 'rotten' if pred > 0.8 else 'fresh'
-                                        except:
+                                        except Exception as e:
+                                            print(f"Error in CNN prediction: {e}")
                                             prediction = 'unknown'
-                                    else:
-                                        prediction = 'unknown'
-                                    
-                                    detections.append({
-                                        "box": [x1, y1, x2, y2],
-                                        "class": class_name,
-                                        "confidence": confidence,
-                                        "prediction": prediction,
-                                        "timestamp": datetime.datetime.now().isoformat()
-                                    })
-                    
-                    # Send results back to client
-                    response = {
-                        "type": "detection_results",
-                        "detections": detections,
-                        "frame_count": frame_data.get("frame_count", 0),
-                        "timestamp": datetime.datetime.now().isoformat()
-                    }
-                    
-                    await manager.send_personal_message(json.dumps(response), websocket)
+                                        
+                                        detections.append({
+                                            "box": [x1, y1, x2, y2],
+                                            "class": class_name,
+                                            "confidence": confidence,
+                                            "prediction": prediction,
+                                            "timestamp": datetime.datetime.now().isoformat()
+                                        })
+                        
+                        # Send results back to client
+                        response = {
+                            "type": "detection_results",
+                            "detections": detections,
+                            "frame_count": frame_data.get("frame_count", 0),
+                            "timestamp": datetime.datetime.now().isoformat()
+                        }
+                        
+                        await manager.send_personal_message(json.dumps(response), websocket)
+                        
+                    except Exception as e:
+                        print(f"Error in YOLO processing: {e}")
+                        await manager.send_personal_message(json.dumps({
+                            "type": "error",
+                            "message": f"Processing error: {str(e)}"
+                        }), websocket)
             
             elif frame_data.get("type") == "ping":
                 # Keep connection alive
@@ -489,3 +555,70 @@ async def process_video_frame(frame_data: dict):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+
+""" for resq cart -> route optimization to nearby ngo's"""
+
+load_dotenv()
+API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+if not API_KEY:
+    raise RuntimeError("Set GOOGLE_MAPS_API_KEY in .env")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class Location(BaseModel):
+    lat: float
+    lng: float
+
+class RouteRequest(BaseModel):
+    origin_lat: float
+    origin_lng: float
+    dest_lat: float
+    dest_lng: float
+
+@app.post("/nearby-ngos")
+def nearby_ngos(loc: Location):
+    url = (
+        f"https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+        f"?location={loc.lat},{loc.lng}"
+        f"&radius=15000"
+        f"&keyword=food+bank|charity|ngo"
+        f"&key={API_KEY}"
+    )
+    res = requests.get(url).json()
+    if res.get("status") != "OK":
+        raise HTTPException(400, res.get("error_message", "Places API error"))
+    ngos = []
+    for p in res["results"]:
+        ngos.append({
+            "name": p["name"],
+            "address": p.get("vicinity", ""),
+            "lat": p["geometry"]["location"]["lat"],
+            "lng": p["geometry"]["location"]["lng"],
+            "place_id": p["place_id"]
+        })
+    return {"ngos": ngos}
+
+@app.post("/route")
+def get_route(req: RouteRequest):
+    url = (
+        f"https://maps.googleapis.com/maps/api/directions/json"
+        f"?origin={req.origin_lat},{req.origin_lng}"
+        f"&destination={req.dest_lat},{req.dest_lng}"
+        f"&key={API_KEY}"
+    )
+    res = requests.get(url).json()
+    if res.get("status") != "OK":
+        raise HTTPException(400, res.get("error_message", "Directions API error"))
+    route = res["routes"][0]
+    overview_polyline = route["overview_polyline"]["points"]
+    steps = [{
+        "distance": s["distance"]["text"],
+        "duration": s["duration"]["text"],
+        "instruction": s["html_instructions"]
+    } for leg in route["legs"] for s in leg["steps"]]
+    return {"polyline": overview_polyline, "steps": steps}

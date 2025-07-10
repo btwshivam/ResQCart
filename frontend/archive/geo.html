@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🌍 Final Advanced Geo Bubble Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+    .legend {
+      background: white;
+      line-height: 1.5em;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    .legend span {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-right: 5px;
+      border: 1px solid #333;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([28.6, 77.2], 8);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // ✅ Sample store data — many bubbles!
+    const stores = [
+      { name: "Store A", lat: 28.6139, lng: 77.2090, spoilage: 50, category: "Fruits", contact: "999-123456" },
+      { name: "Store B", lat: 28.7041, lng: 77.1025, spoilage: 80, category: "Dairy", contact: "999-654321" },
+      { name: "Store C", lat: 28.5355, lng: 77.3910, spoilage: 30, category: "Vegetables", contact: "999-112233" },
+      { name: "Store D", lat: 28.4595, lng: 77.0266, spoilage: 90, category: "Meat", contact: "999-445566" },
+      { name: "Store E", lat: 28.4089, lng: 77.3178, spoilage: 60, category: "Bakery", contact: "999-778899" },
+      { name: "Store F", lat: 28.6692, lng: 77.4538, spoilage: 40, category: "Fruits", contact: "999-889900" },
+      { name: "Store G", lat: 28.9845, lng: 77.7064, spoilage: 70, category: "Dairy", contact: "999-998877" }
+    ];
+
+    const categoryColors = {
+      "Fruits": "green",
+      "Dairy": "blue",
+      "Vegetables": "orange",
+      "Meat": "red",
+      "Bakery": "purple"
+    };
+
+    stores.forEach(store => {
+      const circle = L.circleMarker([store.lat, store.lng], {
+        color: categoryColors[store.category] || "gray",
+        fillColor: categoryColors[store.category] || "gray",
+        fillOpacity: 0.6,
+        radius: store.spoilage * 0.4  // scale factor for radius
+      }).addTo(map);
+      circle.bindPopup(`
+        <div style="font-size: 14px;">
+          <b>${store.name}</b><br>
+          <b>Category:</b> ${store.category}<br>
+          <b>Spoilage:</b> ${store.spoilage} kg<br>
+          <b>Contact:</b> ${store.contact}
+        </div>
+      `);
+    });
+
+    // ✅ Add legend
+    const legend = L.control({ position: "bottomright" });
+
+    legend.onAdd = function () {
+      const div = L.DomUtil.create("div", "legend");
+      div.innerHTML += "<strong>🗂️ Category</strong><br>";
+      for (const cat in categoryColors) {
+        div.innerHTML += `<span style="background:${categoryColors[cat]}"></span> ${cat}<br>`;
+      }
+      div.innerHTML += "<br><strong>🔵 Bubble Size</strong><br>Represents spoilage amount in kg.";
+      return div;
+    };
+
+    legend.addTo(map);
+  </script>
+</body>
+</html>
