@@ -1,3 +1,20 @@
+@import 'leaflet/dist/leaflet.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom styles for map components */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+}
+
+.custom-div-icon {
+  background: none !important;
+  border: none !important;
+}
+
+/* Fix for Leaflet attribution */
+.leaflet-control-attribution {
+  font-size: 10px !important;
+}

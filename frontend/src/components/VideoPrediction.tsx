@@ -51,6 +51,7 @@ const VideoPrediction: React.FC = () => {
       websocketRef.current = ws;
       
       ws.onopen = () => {
+         console.log("WebSocket opened");
         setConnectionStatus('connected');
         setIsStreaming(true);
         startFrameCapture();
@@ -120,15 +121,32 @@ const VideoPrediction: React.FC = () => {
 
   const startFrameCapture = useCallback(() => {
     const captureFrame = () => {
-      if (!isStreaming || !videoRef.current || !canvasRef.current || !websocketRef.current) {
+      console.log("CaptureFrame called"); 
+
+      if (!videoRef.current) {
+        console.log("No videoRef");
         return;
       }
+      if (!canvasRef.current) {
+        console.log("No canvasRef");
+        return;
+      }
+      if (!websocketRef.current) {
+        console.log("No websocketRef");
+        return;
+      }
+
       
       const video = videoRef.current;
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       
       if (!ctx) return;
+
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        animationFrameRef.current = requestAnimationFrame(captureFrame);
+        return;
+      }
       
       // Set canvas size to match video
       canvas.width = video.videoWidth;
@@ -136,10 +154,36 @@ const VideoPrediction: React.FC = () => {
       
       // Draw video frame to canvas
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      // Convert to base64
-      const frameData = canvas.toDataURL('image/jpeg', 0.8);
-      const base64Data = frameData.split(',')[1];
+
+      detections.forEach(detection => {
+        const [x1, y1, x2, y2] = detection.box;
+        const confidence = detection.confidence;
+        const prediction = detection.prediction || 'unknown';
+
+        let color = '#00ff00'; // fresh = green
+        if (prediction === 'rotten') color = '#ff0000';
+        else if (prediction === 'unknown') color = '#ffff00';
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+        const label = `${detection.class} (${(confidence * 100).toFixed(1)}%) - ${prediction}`;
+        const labelWidth = ctx.measureText(label).width + 10;
+        const labelHeight = 20;
+
+        ctx.fillStyle = color;
+        ctx.fillRect(x1, y1 - labelHeight, labelWidth, labelHeight);
+
+        ctx.fillStyle = '#000000';
+        ctx.font = '12px Arial';
+        ctx.fillText(label, x1 + 5, y1 - 5);
+    });
+        
+        // Convert to base64
+        const frameData = canvas.toDataURL('image/jpeg', 0.8);
+        const base64Data = frameData.split(',')[1];
+        console.log("Base64 length:", base64Data.length);
       
       // Send frame to server
       const message = {
@@ -149,6 +193,7 @@ const VideoPrediction: React.FC = () => {
       };
       
       if (websocketRef.current?.readyState === WebSocket.OPEN) {
+        console.log("Sending frame message:", message); 
         websocketRef.current.send(JSON.stringify(message));
         frameCountRef.current++;
         
@@ -175,57 +220,57 @@ const VideoPrediction: React.FC = () => {
     captureFrame();
   }, [isStreaming]);
 
-  const drawDetections = useCallback(() => {
-    if (!canvasRef.current || !videoRef.current) return;
+  // const drawDetections = useCallback(() => {
+  //   if (!canvasRef.current || !videoRef.current) return;
     
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  //   const canvas = canvasRef.current;
+  //   const ctx = canvas.getContext('2d');
+  //   if (!ctx) return;
     
-    // Clear previous drawings
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  //   // Clear previous drawings
+  //   ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw video frame
-    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+  //   // Draw video frame
+  //   ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
     
-    // Draw detection boxes
-    detections.forEach(detection => {
-      const [x1, y1, x2, y2] = detection.box;
-      const confidence = detection.confidence;
-      const prediction = detection.prediction || 'unknown';
+  //   // Draw detection boxes
+  //   detections.forEach(detection => {
+  //     const [x1, y1, x2, y2] = detection.box;
+  //     const confidence = detection.confidence;
+  //     const prediction = detection.prediction || 'unknown';
       
-      // Choose color based on prediction
-      let color = '#00ff00'; // green for fresh
-      if (prediction === 'rotten') {
-        color = '#ff0000'; // red for rotten
-      } else if (prediction === 'unknown') {
-        color = '#ffff00'; // yellow for unknown
-      }
+  //     // Choose color based on prediction
+  //     let color = '#00ff00'; // green for fresh
+  //     if (prediction === 'rotten') {
+  //       color = '#ff0000'; // red for rotten
+  //     } else if (prediction === 'unknown') {
+  //       color = '#ffff00'; // yellow for unknown
+  //     }
       
-      // Draw bounding box
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+  //     // Draw bounding box
+  //     ctx.strokeStyle = color;
+  //     ctx.lineWidth = 2;
+  //     ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
       
-      // Draw label background
-      const label = `${detection.class} (${(confidence * 100).toFixed(1)}%) - ${prediction}`;
-      const labelWidth = ctx.measureText(label).width + 10;
-      const labelHeight = 20;
+  //     // Draw label background
+  //     const label = `${detection.class} (${(confidence * 100).toFixed(1)}%) - ${prediction}`;
+  //     const labelWidth = ctx.measureText(label).width + 10;
+  //     const labelHeight = 20;
       
-      ctx.fillStyle = color;
-      ctx.fillRect(x1, y1 - labelHeight, labelWidth, labelHeight);
+  //     ctx.fillStyle = color;
+  //     ctx.fillRect(x1, y1 - labelHeight, labelWidth, labelHeight);
       
-      // Draw label text
-      ctx.fillStyle = '#000000';
-      ctx.font = '12px Arial';
-      ctx.fillText(label, x1 + 5, y1 - 5);
-    });
-  }, [detections]);
+  //     // Draw label text
+  //     ctx.fillStyle = '#000000';
+  //     ctx.font = '12px Arial';
+  //     ctx.fillText(label, x1 + 5, y1 - 5);
+  //   });
+  // }, [detections]);
 
   // Draw detections when they change
-  useEffect(() => {
-    drawDetections();
-  }, [detections, drawDetections]);
+  // useEffect(() => {
+  //   drawDetections();
+  // }, [detections, drawDetections]);
 
   // Cleanup on unmount
   useEffect(() => {

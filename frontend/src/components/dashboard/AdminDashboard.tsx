@@ -17,6 +17,8 @@ import { productApi, dashboardApi } from '../../services/api';
 import AIInsightsCard from './AIInsightsCard';
 import CategoryDistributionCard from './CategoryDistributionCard';
 import RealtimePredictionAnalysis from './RealtimePredictionAnalysis';
+import HeatmapChart from './HeatmapChart';
+import Scatter3DChart from './Scatter3DChart';
 
 // Register ChartJS components
 ChartJS.register(
@@ -424,52 +426,23 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Rescue Status Chart */}
+          {/* 3D Scatter Plot */}
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Rescue Actions Distribution</h3>
-              <div className="mt-5 h-64 flex justify-center">
-                <div style={{ maxWidth: '250px' }}>
-                  <Doughnut 
-                    data={rescueData} 
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          position: 'right',
-                        },
-                      },
-                    }} 
-                  />
-                </div>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">3D Spoilage Hotspots</h3>
+              <div className="mt-5">
+                <Scatter3DChart />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Trends Chart */}
+        {/* Heatmap Chart */}
         <div className="mt-5 bg-white overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">6-Month Trends</h3>
-            <div className="mt-5 h-80">
-              <Line 
-                data={trendsData} 
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: 'top',
-                    },
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                    },
-                  },
-                }} 
-              />
+            <h3 className="text-lg leading-6 font-medium text-gray-900">Spoilage Heatmap Analysis</h3>
+            <div className="mt-5">
+              <HeatmapChart />
             </div>
           </div>
         </div>

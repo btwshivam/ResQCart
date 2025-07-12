@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { AdminDashboard, AIInsightsCard, CategoryDistributionCard } from './components/dashboard';
 import VideoPrediction from './components/VideoPrediction';
+import RescueNetwork from './components/rescue/RescueNetwork';
+import WasteReductionAnalytics from './components/analytics/WasteReductionAnalytics';
 import './App.css';
 
 function App() {
@@ -57,12 +59,9 @@ function App() {
           
           {activeTab === 'video' && <VideoPrediction />}
           
-          {activeTab === 'rescue' && (
-            <div className="px-4 py-6 sm:px-0">
-              <h2 className="text-2xl font-semibold text-gray-900">Rescue Network Management</h2>
-              <p className="mt-2 text-gray-600">Food bank connections and rescue operation status will be displayed here.</p>
-            </div>
-          )}
+          {activeTab === 'rescue' && <RescueNetwork />} 
+
+          {activeTab === 'analytics' && <WasteReductionAnalytics />}
           
           {activeTab === 'analytics' && (
             <div className="px-4 py-6 sm:px-0">

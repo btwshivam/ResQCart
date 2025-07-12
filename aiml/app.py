@@ -28,6 +28,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -187,6 +188,22 @@ def dynamic_apple_price_engine(prediction, confidence, sensor_data, daily_sales_
         'business_context': context 
     }
 
+def safe_crop_box(box, frame_shape):
+    """
+    Ensure YOLO box coordinates are valid and inside frame bounds.
+    Returns clamped (x1, y1, x2, y2).
+    """
+    x1, y1, x2, y2 = box
+    h, w = frame_shape[:2]
+
+    # Round coordinates
+    x1 = max(0, min(int(round(x1)), w - 1))
+    y1 = max(0, min(int(round(y1)), h - 1))
+    x2 = max(x1 + 1, min(int(round(x2)), w))
+    y2 = max(y1 + 1, min(int(round(y2)), h))
+
+    return x1, y1, x2, y2
+
 @app.post("/detect")
 async def detect_apples(file: UploadFile = File(...)):
     if not file.content_type.startswith('image/'):
@@ -206,7 +223,7 @@ async def detect_apples(file: UploadFile = File(...)):
     for result in results:
         boxes = result.boxes.xyxy.cpu().numpy()
         for box in boxes:
-            x1, y1, x2, y2 = map(int, box[:4])
+            x1, y1, x2, y2 = safe_crop_box(box[:4], frame.shape)
             apple_crop = frame[y1:y2, x1:x2]
 
             if apple_crop.size == 0:
@@ -410,13 +427,18 @@ async def root():
 @app.websocket("/ws/video")
 async def websocket_video_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
+    print("WebSocket connection accepted")
     try:
         while True:
             # Receive base64 encoded frame from client
             data = await websocket.receive_text()
+            print(f"Got data: {len(data)} chars")
             frame_data = json.loads(data)
+            # print("Received raw data:", data)
+            # print("Parsed frame_data:", frame_data)
             
             if frame_data.get("type") == "frame":
+                print("Got frame!")
                 # Decode base64 frame
                 frame_bytes = base64.b64decode(frame_data["frame"])
                 nparr = np.frombuffer(frame_bytes, np.uint8)
@@ -448,7 +470,10 @@ async def websocket_video_endpoint(websocket: WebSocket):
                             class_ids = result.boxes.cls.cpu().numpy()
                             
                             for i, box in enumerate(boxes):
-                                x1, y1, x2, y2 = map(int, box[:4])
+                                x1, y1, x2, y2 = safe_crop_box(box[:4], frame.shape)
+                                height, width, _ = frame_resized.shape
+                                x1, y1 = max(0, x1), max(0, y1)
+                                x2, y2 = min(width, x2), min(height, y2)
                                 confidence = float(confidences[i])
                                 class_id = int(class_ids[i])
                                 
@@ -457,7 +482,7 @@ async def websocket_video_endpoint(websocket: WebSocket):
                                 
                                 # Crop detected object for further analysis
                                 if x2 > x1 and y2 > y1:
-                                    object_crop = frame[y1:y2, x1:x2]
+                                    object_crop = frame_resized[y1:y2, x1:x2]
                                     if object_crop.size > 0:
                                         object_crop_rgb = cv2.cvtColor(object_crop, cv2.COLOR_BGR2RGB)
                                         pil_image = Image.fromarray(object_crop_rgb)
@@ -531,7 +556,7 @@ async def process_video_frame(frame_data: dict):
             class_ids = result.boxes.cls.cpu().numpy()
             
             for i, box in enumerate(boxes):
-                x1, y1, x2, y2 = map(int, box[:4])
+                x1, y1, x2, y2 = safe_crop_box(box[:4], frame.shape)
                 confidence = float(confidences[i])
                 class_id = int(class_ids[i])
                 class_name = "apple" if class_id == 0 else f"object_{class_id}"
@@ -578,43 +603,145 @@ class RouteRequest(BaseModel):
 
 @app.post("/nearby-ngos")
 def nearby_ngos(loc: Location):
-    url = (
-        f"https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-        f"?location={loc.lat},{loc.lng}"
-        f"&radius=15000"
-        f"&keyword=food+bank|charity|ngo"
-        f"&key={API_KEY}"
-    )
-    res = requests.get(url).json()
-    if res.get("status") != "OK":
-        raise HTTPException(400, res.get("error_message", "Places API error"))
-    ngos = []
-    for p in res["results"]:
-        ngos.append({
-            "name": p["name"],
-            "address": p.get("vicinity", ""),
-            "lat": p["geometry"]["location"]["lat"],
-            "lng": p["geometry"]["location"]["lng"],
-            "place_id": p["place_id"]
-        })
-    return {"ngos": ngos}
+    # url = (
+    #     f"https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+    #     f"?location={loc.lat},{loc.lng}"
+    #     f"&radius=15000"
+    #     f"&keyword=food+bank|charity|ngo"
+    #     f"&key={API_KEY}"
+    # )
+    # res = requests.get(url).json()
+    # if res.get("status") != "OK":
+    #     raise HTTPException(400, res.get("error_message", "Places API error"))
+    # ngos = []
+    # for p in res["results"]:
+    #     ngos.append({
+    #         "name": p["name"],
+    #         "address": p.get("vicinity", ""),
+    #         "lat": p["geometry"]["location"]["lat"],
+    #         "lng": p["geometry"]["location"]["lng"],
+    #         "place_id": p["place_id"]
+    #     })
+    # return {"ngos": ngos}
+    if not API_KEY:
+        raise HTTPException(
+            status_code=503, 
+            detail="Google Maps API key not configured. Please set GOOGLE_MAPS_API_KEY in your environment variables."
+        )
+
+    try:
+        url = (
+            f"https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+            f"?location={loc.lat},{loc.lng}"
+            f"&radius=15000"
+            f"&type=food"
+            f"&keyword=food+bank|charity|ngo|food+pantry"
+            f"&key={API_KEY}"
+        )
+
+        res = requests.get(url, timeout=10)
+        res.raise_for_status()
+        data = res.json()
+
+        if data.get("status") != "OK":
+            error_msg = data.get("error_message", f"Places API error: {data.get('status')}")
+            raise HTTPException(status_code=400, detail=error_msg)
+
+        ngos = []
+        for p in data.get("results", []):
+            ngo = {
+                "name": p.get("name", "Unknown NGO"),
+                "address": p.get("vicinity", p.get("formatted_address", "Address not available")),
+                "lat": p["geometry"]["location"]["lat"],
+                "lng": p["geometry"]["location"]["lng"],
+                "place_id": p.get("place_id", ""),
+                "rating": p.get("rating"),
+                "types": p.get("types", [])
+            }
+            ngos.append(ngo)
+
+        return {"ngos": ngos, "total": len(ngos)}
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Network error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error finding NGOs: {str(e)}")
 
 @app.post("/route")
 def get_route(req: RouteRequest):
-    url = (
-        f"https://maps.googleapis.com/maps/api/directions/json"
-        f"?origin={req.origin_lat},{req.origin_lng}"
-        f"&destination={req.dest_lat},{req.dest_lng}"
-        f"&key={API_KEY}"
-    )
-    res = requests.get(url).json()
-    if res.get("status") != "OK":
-        raise HTTPException(400, res.get("error_message", "Directions API error"))
-    route = res["routes"][0]
-    overview_polyline = route["overview_polyline"]["points"]
-    steps = [{
-        "distance": s["distance"]["text"],
-        "duration": s["duration"]["text"],
-        "instruction": s["html_instructions"]
-    } for leg in route["legs"] for s in leg["steps"]]
-    return {"polyline": overview_polyline, "steps": steps}
+    # url = (
+    #     f"https://maps.googleapis.com/maps/api/directions/json"
+    #     f"?origin={req.origin_lat},{req.origin_lng}"
+    #     f"&destination={req.dest_lat},{req.dest_lng}"
+    #     f"&key={API_KEY}"
+    # )
+    # res = requests.get(url).json()
+    # if res.get("status") != "OK":
+    #     raise HTTPException(400, res.get("error_message", "Directions API error"))
+    # route = res["routes"][0]
+    # overview_polyline = route["overview_polyline"]["points"]
+    # steps = [{
+    #     "distance": s["distance"]["text"],
+    #     "duration": s["duration"]["text"],
+    #     "instruction": s["html_instructions"]
+    # } for leg in route["legs"] for s in leg["steps"]]
+    # return {"polyline": overview_polyline, "steps": steps}
+    if not API_KEY:
+            raise HTTPException(
+                status_code=503, 
+                detail="Google Maps API key not configured. Please set GOOGLE_MAPS_API_KEY in your environment variables."
+            )
+
+    try:
+        url = (
+            f"https://maps.googleapis.com/maps/api/directions/json"
+            f"?origin={req.origin_lat},{req.origin_lng}"
+            f"&destination={req.dest_lat},{req.dest_lng}"
+            f"&mode=driving"
+            f"&key={API_KEY}"
+        )
+
+        res = requests.get(url, timeout=10)
+        res.raise_for_status()
+        data = res.json()
+
+        if data.get("status") != "OK":
+            error_msg = data.get("error_message", f"Directions API error: {data.get('status')}")
+            raise HTTPException(status_code=400, detail=error_msg)
+
+        if not data.get("routes"):
+            raise HTTPException(status_code=404, detail="No routes found")
+
+        route = data["routes"][0]
+        overview_polyline = route["overview_polyline"]["points"]
+
+        # Extract detailed step-by-step directions
+        steps = []
+        total_distance = 0
+        total_duration = 0
+
+        for leg in route["legs"]:
+            total_distance += leg["distance"]["value"]
+            total_duration += leg["duration"]["value"]
+
+            for step in leg["steps"]:
+                steps.append({
+                    "distance": step["distance"]["text"],
+                    "duration": step["duration"]["text"],
+                    "instruction": step["html_instructions"]
+                })
+
+        return {
+            "polyline": overview_polyline, 
+            "steps": steps,
+            "summary": {
+                "total_distance": f"{total_distance / 1000:.1f} km",
+                "total_duration": f"{total_duration // 60} min",
+                "total_steps": len(steps)
+            }
+        }
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Network error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting route: {str(e)}")
