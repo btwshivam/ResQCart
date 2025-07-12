@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create an axios instance with the base URL from environment variables
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -87,12 +87,25 @@ export const dashboardApi = {
   // Get impact metrics
   getImpactMetrics: () => api.get('/dashboard/impact'),
 };
+export const rescueApi = {
+  // Find nearby NGOs
+  getNearbyNGOs: (lat: number, lng: number) => 
+    api.post('/nearby-ngos', { lat, lng }),
 
+  // Get directions to NGO
+  getRoute: (originLat: number, originLng: number, destLat: number, destLng: number) =>
+    api.post('/route', {
+      origin_lat: originLat,
+      origin_lng: originLng,
+      dest_lat: destLat,
+      dest_lng: destLng
+    }),
+};
 // AI/ML API endpoints
 export const aimlApi = {
   // Detect food items in image
   detectItems: (formData: FormData) => 
-    axios.post('http://localhost:8000/detect', formData, {
+    axios.post('/aiml/detect', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -100,11 +113,11 @@ export const aimlApi = {
   
   // Predict milk spoilage
   predictMilkSpoilage: (sku: string) => 
-    axios.post(`http://localhost:8000/predict_milk_spoilage?sku=${sku}`),
+    axios.post(`/aiml/predict_milk_spoilage?sku=${sku}`),
     
   // Get AIML service status
   getStatus: () => 
-    axios.get('http://localhost:8000/'),
+    axios.get('/aiml/'),
 };
 
 export default api;
