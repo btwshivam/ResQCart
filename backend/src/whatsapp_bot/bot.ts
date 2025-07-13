@@ -13,36 +13,53 @@ const PORT = process.env.BOT_PORT || 3001;
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
+// Centralized async command router
+async function handleCommand(incomingMessage: string, fromNumber: string, location?: { lat: number, lng: number }) {
+  try {
+    const msg = incomingMessage.trim().toLowerCase();
+    if (msg === 'help' || msg === 'menu' || msg === '/help' || msg === '/menu') {
+      return getHelpMenu();
+    } else if (msg.startsWith('predict') || msg.includes('spoilage')) {
+      return await predictSpoilage(incomingMessage);
+    } else if (msg.startsWith('info') || msg.includes('food')) {
+      return await getFoodInfo(incomingMessage);
+    } else if (msg.startsWith('rescue') || msg.startsWith('donate')) {
+      // In future: parse location from message or user profile
+      return await getRescueOptions(incomingMessage, location);
+    } else if (msg === 'hello' || msg === 'hi' || msg === '/hello' || msg === '/hi') {
+      return getWelcomeMessage();
+    } else if (msg.startsWith('contact')) {
+      return '📞 *Contact Support*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nFor support or feedback, email us at support@resqcart.com or call (555) RESQCART.';
+    } else if (msg.startsWith("what's new") || msg.startsWith('whats new')) {
+      return '🆕 *What\'s New?*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n- Improved prediction accuracy\n- New donation partners added\n- Try the new “donate” command!';
+    } else {
+      return getDefaultResponse();
+    }
+  } catch (err: any) {
+    console.error('Command handler error:', err.message);
+    return '❌ Sorry, something went wrong. Please try again later.';
+  }
+}
+
 // WhatsApp webhook endpoint
-app.post('/webhook', (req, res) => {
+app.post('/webhook', async (req, res) => {
   console.log('📱 WhatsApp message received:', req.body);
-  
+
   const incomingMessage = req.body.Body?.toLowerCase() || '';
   const fromNumber = req.body.From;
-  
+  // In future: parse location from message or user profile
+  const location = undefined;
+
   console.log(`📨 From: ${fromNumber}`);
   console.log(`💬 Message: ${incomingMessage}`);
-  
+
   const twiml = new twilio.twiml.MessagingResponse();
   let response = '';
-  
-  // Simple command parser
-  if (incomingMessage.includes('help') || incomingMessage.includes('menu')) {
-    response = getHelpMenu();
-  } else if (incomingMessage.includes('predict') || incomingMessage.includes('spoilage')) {
-    response = predictSpoilage(incomingMessage);
-  } else if (incomingMessage.includes('info') || incomingMessage.includes('food')) {
-    response = getFoodInfo(incomingMessage);
-  } else if (incomingMessage.includes('rescue') || incomingMessage.includes('donate')) {
-    response = getRescueOptions(incomingMessage);
-  } else if (incomingMessage.includes('hello') || incomingMessage.includes('hi')) {
-    response = getWelcomeMessage();
-  } else {
-    response = getDefaultResponse();
-  }
-  
+
+  response = await handleCommand(incomingMessage, fromNumber, location);
+
   twiml.message(response);
-  
+
   console.log(`📤 Sending response: ${response}`);
   res.writeHead(200, { 'Content-Type': 'text/xml' });
   res.end(twiml.toString());
