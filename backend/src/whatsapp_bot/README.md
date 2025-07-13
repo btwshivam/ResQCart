@@ -1,13 +1,16 @@
 # ResQCart WhatsApp Bot
 
-A simple WhatsApp bot built with Twilio for food spoilage prediction and rescue options.
+A professional WhatsApp bot built with Twilio for food spoilage prediction, food info, and food rescue/donation options.
 
 ## Features
 
-- 🍎 **Food Spoilage Prediction** - Predict how long food items will last
-- 📚 **Food Information** - Get storage tips and shelf life information
-- 🆘 **Rescue Options** - Find nearby food donation locations
-
+- 🍎 **Food Spoilage Prediction** — Predict how long food items will last using AI
+- 📚 **Food Information** — Get storage tips and shelf life information
+- 🆘 **Donate Food** — Find local food donation organizations
+- 🛠️ **Quick Reference Help** — Professional, grouped command menu
+- 👋 **Branded Welcome** — Warm, motivational welcome message
+- 📞 **Contact Support** — Instantly get support or send feedback
+- 🆕 **What’s New** — See the latest features and updates
 
 ## Quick Start
 
@@ -35,63 +38,39 @@ BOT_PORT=3001
 
 ### 3. Set Up Twilio (For WhatsApp Integration)
 
-#### Get Twilio Credentials
-
 1. Go to [Twilio Console](https://console.twilio.com/)
-2. Sign up or log in
-3. Copy your Account SID and Auth Token
-4. Add them to your `.env` file
-
-#### Activate WhatsApp Sandbox
-
-1. In Twilio Console, go to **Messaging > Try it out > Send a WhatsApp message**
-2. You'll see a sandbox number (usually +14155238886)
-3. Send "join <your-sandbox-code>" to that number from your WhatsApp
-4. You'll receive a confirmation message
-
-#### Run Setup Script
-
-```bash
-npm run bot:setup
-```
-
-This will test your connection and provide next steps.
+2. Activate WhatsApp Sandbox
+3. Set the webhook URL to: `https://<your-ngrok-url>/webhook`
 
 ### 4. Start the WhatsApp Bot
 
-#### Option A: Local Development (with ngrok)
-
-1. Install ngrok: `npm install -g ngrok`
-2. Start the bot: `npm run bot`
-3. In another terminal: `ngrok http 3001`
-4. Copy the ngrok URL (e.g., `https://abc123.ngrok.io`)
-5. In Twilio Console, set webhook URL to: `https://abc123.ngrok.io/webhook`
-
-#### Option B: Production Deployment
-
-1. Deploy your bot to a server with a public URL
-2. Set the webhook URL in Twilio Console to: `https://your-domain.com/webhook`
+```bash
+npm run bot
+```
 
 ## Available Commands
 
-### WhatsApp Commands
+All commands are **case-insensitive** (e.g., `help`, `HELP`, `Help` all work).
 
-- `help` or `menu` - Show available options
-- `predict [food]` - Predict spoilage (e.g., "predict apple")
-- `info [food]` - Get food information (e.g., "info banana")
-- `rescue` - Find rescue/donation options
-- `hello` - Welcome message
+| Command                | Description                                                      | Example                |
+|------------------------|------------------------------------------------------------------|------------------------|
+| help / menu            | Show the quick reference help menu                               | help                   |
+| hello / hi             | Show a warm, branded welcome message                             | hello                  |
+| predict [food]         | Predict spoilage for a food item using AI                        | predict apple          |
+| info [food]            | Get storage tips and shelf life for a food item                  | info banana            |
+| donate                 | Find local food donation organizations                           | donate                 |
+| rescue                 | (Alias for donate)                                               | rescue                 |
+| contact                | Contact support or send feedback                                 | contact                |
+| what's new / whats new | See the latest features and updates                              | what's new             |
 
-### Supported Food Items
+## Enhanced User Experience
 
-The bot currently supports these items with detailed predictions:
-- Apple
-- Banana
-- Tomato
-- Milk
-- Bread
-
-For other items, it provides generic predictions.
+- **Help Menu**: Grouped by category, with usage tips and examples.
+- **Welcome Message**: Motivational, branded, and action-oriented.
+- **Professional Formatting**: All responses use clear structure, emojis, and branding.
+- **Donation Guidance**: Step-by-step tips for donating food safely.
+- **Support & Feedback**: Instantly get support or send feedback with `contact`.
+- **Latest Features**: Stay up to date with `what's new`.
 
 ## Project Structure
 
@@ -105,55 +84,15 @@ whatsapp_bot/
 
 ## Development
 
-### Adding New Commands
-
-1. Add the command logic in `handlers.ts`
-2. Update the command parser in `bot.ts`
-3. Update the help menu
-
-### Adding New Food Items
-
-Edit the `predictions` and `foodInfo` objects in `handlers.ts`:
-
-```typescript
-const predictions = {
-  'apple': { days: 7, status: 'Good', confidence: 85 },
-  'orange': { days: 10, status: 'Good', confidence: 80 }, // Add new item
-  // ...
-};
-```
+- To add new commands, update `handlers.ts` and the command router in `bot.ts`.
+- To update the help or welcome message, edit the corresponding functions in `handlers.ts`.
 
 ## Troubleshooting
 
-### Common Issues
+- **404 Not Found on ngrok**: Make sure your Twilio webhook URL ends with `/webhook`.
+- **Bot not responding**: Check your console logs and ensure the bot is running on the correct port.
+- **Need help?** Use the `contact` command in WhatsApp for instant support.
 
-1. **"Cannot find module 'twilio'"**
-   - Run `npm install` to install dependencies
+---
 
-2. **"Missing Twilio credentials"**
-   - Check your `.env` file has correct TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN
-
-3. **Webhook not receiving messages**
-   - Ensure ngrok is running and URL is correct
-   - Check Twilio Console webhook URL setting
-   - Verify WhatsApp sandbox is activated
-
-4. **Bot not responding**
-   - Check console logs for errors
-   - Verify the bot server is running on correct port
-
-### Debug Mode
-
-Add more console logs by editing the handlers in `handlers.ts`. All functions include console.log statements for debugging.
-
-## Next Steps
-
-- Integrate with your ML model for real predictions
-- Add database storage for user interactions
-- Implement location-based rescue options
-- Add image recognition for food items
-- Create admin dashboard for bot management
-
-## License
-
-MIT License - see main project LICENSE file 
+*ResQCart — Every meal saved is a win for the planet!* 🌍 
