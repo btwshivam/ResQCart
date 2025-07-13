@@ -49,7 +49,7 @@ const StoreManagerInterface: React.FC<StoreManagerInterfaceProps> = ({ selectedP
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [discountPercentage, setDiscountPercentage] = useState<number>(15);
+  const [discountPercentage, setDiscountPercentage] = useState<number | null>(null);
   const [cascadeResults, setCascadeResults] = useState<any>(null);
   const [cascadeLoading, setCascadeLoading] = useState(false);
   
@@ -113,28 +113,64 @@ const StoreManagerInterface: React.FC<StoreManagerInterfaceProps> = ({ selectedP
     }
   };
   
-  const handleApplyPriceReduction = async () => {
+  const handleApplyPriceReduction = (): void => {
     if (selectedProducts.length === 0) {
       setError('Please select at least one product.');
       return;
     }
-    
+
     try {
       setLoading(true);
       setError(null);
-      
-      // Apply price reduction to each selected product
-      for (const productId of selectedProducts) {
-        await axios.post(`/api/products/${productId}/price-reduction`, {
-          discountPercentage
-        });
+
+      // Use manual input if provided, otherwise generate random discount
+      let appliedDiscount = discountPercentage;
+      if (!appliedDiscount) {
+        // Generate a random discount between 30% and 50%
+        appliedDiscount = Math.floor(Math.random() * 21) + 30; // Random number between 30 and 50
+        setDiscountPercentage(appliedDiscount);
       }
+
+      // Validate discount range
+      if (appliedDiscount < 30 || appliedDiscount > 50) {
+        setError('Discount must be between 30% and 50%');
+        setLoading(false);
+        return;
+      }
+
+      // Update products with the new discount
+      const updatedProducts = products.map((product: Product) => {
+        if (selectedProducts.includes(product._id)) {
+          // Calculate new price with the discount
+          const newPrice = product.price * (1 - appliedDiscount / 100);
+          
+          // If there's already a discount, only apply if new price is lower
+          if (product.currentPrice) {
+            return {
+              ...product,
+              currentPrice: Number(Math.min(product.currentPrice, newPrice).toFixed(2)),
+              discountPercentage: Math.max(product.discountPercentage, appliedDiscount),
+              rescueStatus: 'price-reduction'
+            };
+          }
+          
+          return {
+            ...product,
+            currentPrice: Number(newPrice.toFixed(2)),
+            discountPercentage: appliedDiscount,
+            rescueStatus: 'price-reduction'
+          };
+        }
+        return product;
+      });
+
+      setProducts(updatedProducts);
+      setSuccessMessage(`Price reduction of ${appliedDiscount}% applied to ${selectedProducts.length} products.`);
       
-      setSuccessMessage(`Price reduction of ${discountPercentage}% applied to ${selectedProducts.length} products.`);
-      setSelectedProducts([]);
+      // Clear the discount input after applying
+      setDiscountPercentage(null);
       
-      // Refresh products list
-      fetchAtRiskProducts();
+      setError(null);
     } catch (err) {
       console.error('Error applying price reduction:', err);
       setError('Failed to apply price reduction. Please try again.');
@@ -364,12 +400,15 @@ const StoreManagerInterface: React.FC<StoreManagerInterfaceProps> = ({ selectedP
                   type="number"
                   name="discount"
                   id="discount"
-                  min="1"
-                  max="90"
-                  value={discountPercentage}
-                  onChange={(e) => setDiscountPercentage(Number(e.target.value))}
+                  min="30"
+                  max="50"
+                  value={discountPercentage || ''}
+                  onChange={(e) => {
+                    const value = e.target.value ? Number(e.target.value) : null;
+                    setDiscountPercentage(value);
+                  }}
                   className="focus:ring-blue-500 focus:border-blue-500 flex-1 block w-full rounded-none rounded-l-md sm:text-sm border-gray-300"
-                  placeholder="15"
+                  placeholder="Enter discount"
                 />
                 <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
                   %
