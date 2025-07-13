@@ -353,8 +353,8 @@ const AdminDashboard = ({ onNavigateToStoreManager }: AdminDashboardProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex gap-4 p-4">
+    <div className="min-h-screen w-full overflow-x-hidden bg-gray-50">
+     
         {/* Sidebar */}
         <div className="flex-shrink-0">
           <div className="sticky top-4">
@@ -363,10 +363,10 @@ const AdminDashboard = ({ onNavigateToStoreManager }: AdminDashboardProps) => {
       </div>
 
         {/* Main Content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 p-6 overflow-x-visible">
       {loading ? (
             <div className="flex justify-center items-center h-96">
-              <div className="text-center">
+              <div className="te-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
                 <p className="text-gray-600 font-medium">Loading dashboard data...</p>
               </div>
@@ -645,8 +645,7 @@ const AdminDashboard = ({ onNavigateToStoreManager }: AdminDashboardProps) => {
               )}
             </div>
           )}
-        </div>
-      </div>
+        </div>     
     </div>
   );
 };
