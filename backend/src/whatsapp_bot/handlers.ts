@@ -289,19 +289,44 @@ export function getHelpMenu(): string {
    _e.g., "info banana"_
 
 🤝 *Donate Food*
-• *donate* — Find local food donation organizations
-   _e.g., "donate"_
+• *donate* or *rescue* — Find local food donation organizations
+   _e.g., "donate" or "rescue"_
 
-🆘 *Support & Feedback*
+👋 *Welcome*
+• *hello* or *hi* — Get a warm welcome and introduction
+
+🛠️ *Help & Support*
+• *help* or *menu* — Show this menu
 • *contact* — Contact support or send feedback
-• *help* — Show this menu
-• *what's new* — See latest features
+• *what's new* or *whats new* — See the latest features
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 *How to use:*
 Just type a command, like "predict milk" or "info bread".
 
 🌱 *Together, let's reduce food waste!*
+`;
+}
+
+export function getWhatsNewMessage(): string {
+  return `🆕 *WHAT'S NEW AT RESQCART?*
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ *Recent Improvements:*
+• Enhanced professional help and welcome messages
+• All commands now accept multiple alternatives (e.g., hi/hello, help/menu)
+• Improved donation directory and guidance
+• More food types supported for predictions and info
+• Case-insensitive command recognition for a smoother experience
+
+🚀 *Upcoming Features:*
+• Personalized usage stats and impact summary
+• Location-based rescue and donation matching
+• More AI-powered food insights
+• Multi-language support
+
+🔔 *Stay tuned for more updates!*
+━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
 }
 

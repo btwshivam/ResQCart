@@ -2,7 +2,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import twilio from 'twilio';
 import dotenv from 'dotenv';
-import { predictSpoilage, getFoodInfo, getRescueOptions, getHelpMenu, getWelcomeMessage, getDefaultResponse } from './handlers';
+import { predictSpoilage, getFoodInfo, getRescueOptions, getHelpMenu, getWelcomeMessage, getDefaultResponse, getWhatsNewMessage } from './handlers';
 
 dotenv.config();
 
@@ -31,7 +31,7 @@ async function handleCommand(incomingMessage: string, fromNumber: string, locati
     } else if (msg.startsWith('contact')) {
       return '📞 *Contact Support*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nFor support or feedback, email us at support@resqcart.com or call (555) RESQCART.';
     } else if (msg.startsWith("what's new") || msg.startsWith('whats new')) {
-      return '🆕 *What\'s New?*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n- Improved prediction accuracy\n- New donation partners added\n- Try the new “donate” command!';
+      return getWhatsNewMessage();
     } else {
       return getDefaultResponse();
     }
