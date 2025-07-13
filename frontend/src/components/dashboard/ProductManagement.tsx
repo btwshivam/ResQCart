@@ -28,7 +28,11 @@ interface ProductFormData {
   imageUrl: string;
 }
 
-const ProductManagement: React.FC = () => {
+interface ProductManagementProps {
+  onNavigateToStoreManager?: (selectedProductId?: string) => void;
+}
+
+const ProductManagement: React.FC<ProductManagementProps> = ({ onNavigateToStoreManager }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -189,6 +193,13 @@ const ProductManagement: React.FC = () => {
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  // Handle take action for at-risk products
+  const handleTakeAction = (productId: string) => {
+    if (onNavigateToStoreManager) {
+      onNavigateToStoreManager(productId);
     }
   };
 
@@ -493,18 +504,28 @@ const ProductManagement: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleEdit(product)}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(product._id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
+                      <div className="flex justify-end space-x-2">
+                        {product.atRisk && onNavigateToStoreManager && (
+                          <button
+                            onClick={() => handleTakeAction(product._id)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Take Action
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product._id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

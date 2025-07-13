@@ -37,7 +37,11 @@ interface RescueRequest {
   daysUntilExpiration: number;
 }
 
-const StoreManagerInterface: React.FC = () => {
+interface StoreManagerInterfaceProps {
+  selectedProductId?: string;
+}
+
+const StoreManagerInterface: React.FC<StoreManagerInterfaceProps> = ({ selectedProductId }) => {
   const [activeTab, setActiveTab] = useState<'at-risk' | 'rescue-requests' | 'cascade'>('at-risk');
   const [products, setProducts] = useState<Product[]>([]);
   const [rescueRequests, setRescueRequests] = useState<RescueRequest[]>([]);
@@ -58,7 +62,26 @@ const StoreManagerInterface: React.FC = () => {
     } else if (activeTab === 'rescue-requests') {
       fetchRescueRequests();
     }
+    
+    // Scroll to top when tab changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);
+  
+  // Auto-select product when selectedProductId is provided
+  useEffect(() => {
+    if (selectedProductId && products.length > 0) {
+      const productExists = products.find(p => p._id === selectedProductId);
+      if (productExists && !selectedProducts.includes(selectedProductId)) {
+        setSelectedProducts([selectedProductId]);
+        setActiveTab('at-risk');
+        
+        // Scroll to top after a short delay to ensure the component is rendered
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [selectedProductId, products, selectedProducts]);
   
   const fetchAtRiskProducts = async () => {
     try {

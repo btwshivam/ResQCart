@@ -53,7 +53,11 @@ interface Product {
   quantityInStock: number;
 }
 
-const AdminDashboard = () => {
+interface AdminDashboardProps {
+  onNavigateToStoreManager?: (selectedProductId?: string) => void;
+}
+
+const AdminDashboard = ({ onNavigateToStoreManager }: AdminDashboardProps) => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     expiringItems: 0,
@@ -340,6 +344,12 @@ const AdminDashboard = () => {
     setActiveTab(tabId);
   };
 
+  const handleTakeAction = (productId: string) => {
+    if (onNavigateToStoreManager) {
+      onNavigateToStoreManager(productId);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex gap-4 p-4">
@@ -574,7 +584,10 @@ const AdminDashboard = () => {
                           <div className="text-xs text-gray-500">
                             Stock: <span className="font-medium">{product.quantityInStock}</span>
                           </div>
-                          <button className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors">
+                          <button 
+                            onClick={() => handleTakeAction(product._id)}
+                            className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+                          >
                             Take Action
                           </button>
                         </div>
@@ -600,7 +613,7 @@ const AdminDashboard = () => {
           {/* Products Tab */}
           {activeTab === 'products' && (
                 <div className="bg-white rounded-2xl shadow-lg">
-            <ProductManagement />
+            <ProductManagement onNavigateToStoreManager={onNavigateToStoreManager} />
                 </div>
           )}
 
