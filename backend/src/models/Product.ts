@@ -168,7 +168,7 @@ productSchema.statics.findAtRisk = function(daysThreshold = 7) {
   
   return this.find({
     expirationDate: { $lte: thresholdDate },
-    atRisk: false,
+    atRisk: true,
     quantityInStock: { $gt: 0 },
   });
 };

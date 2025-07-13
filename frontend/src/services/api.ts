@@ -113,7 +113,7 @@ export const aimlApi = {
   
   // Predict milk spoilage
   predictMilkSpoilage: (sku: string) => 
-    axios.post(`/aiml/predict_milk_spoilage?sku=${sku}`),
+    axios.post('/aiml/predict_milk_spoilage', { sku }),
     
   // Get AIML service status
   getStatus: () => 

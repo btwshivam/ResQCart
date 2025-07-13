@@ -16,9 +16,9 @@ import type { ChartData } from 'chart.js';
 import { productApi, dashboardApi } from '../../services/api';
 import AIInsightsCard from './AIInsightsCard';
 import CategoryDistributionCard from './CategoryDistributionCard';
-import RealtimePredictionAnalysis from './RealtimePredictionAnalysis';
-import HeatmapChart from './HeatmapChart';
-import Scatter3DChart from './Scatter3DChart';
+import ImagePrediction from './ImagePrediction';
+import ProductManagement from './ProductManagement';
+import Sidebar from './Sidebar';
 
 // Register ChartJS components
 ChartJS.register(
@@ -38,6 +38,21 @@ type BarChartData = ChartData<'bar', number[], string>;
 type DoughnutChartData = ChartData<'doughnut', number[], string>;
 type LineChartData = ChartData<'line', number[], string>;
 
+interface Product {
+  _id: string;
+  name: string;
+  category: string;
+  subCategory: string;
+  price: number;
+  currentPrice: number;
+  discountPercentage: number;
+  expirationDate: string;
+  atRisk: boolean;
+  rescueStatus: string;
+  imageUrl: string;
+  quantityInStock: number;
+}
+
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -46,8 +61,8 @@ const AdminDashboard = () => {
     revenueSaved: 0,
     environmentalImpact: 0,
   });
-  const [products, setProducts] = useState<any[]>([]);
-  const [atRiskProducts, setAtRiskProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [atRiskProducts, setAtRiskProducts] = useState<Product[]>([]);
   const [categoryData, setCategoryData] = useState<BarChartData>({
     labels: [],
     datasets: [{
@@ -71,6 +86,7 @@ const AdminDashboard = () => {
     labels: [],
     datasets: [],
   });
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -253,7 +269,7 @@ const AdminDashboard = () => {
           labels: ['Price Reduction', 'Food Bank', 'Employee Discount', 'Final Sale'],
           datasets: [
             {
-              data: [40, 30, 20, 10],
+              data: [15, 8, 4, 2],
               backgroundColor: [
                 'rgba(54, 162, 235, 0.6)',
                 'rgba(75, 192, 192, 0.6)',
@@ -272,270 +288,338 @@ const AdminDashboard = () => {
         });
       }
     };
-    
+
     fetchData();
   }, []);
 
+  // Format currency
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+    }).format(value);
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(date);
+  };
+
+  // Get status badge color
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'price-reduction':
+        return 'bg-blue-100 text-blue-800';
+      case 'food-bank-alert':
+        return 'bg-green-100 text-green-800';
+      case 'employee-discount':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'final-sale':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Get days until expiration
+  const getDaysUntilExpiration = (dateString: string) => {
+    const expirationDate = new Date(dateString);
+    const today = new Date();
+    const diffTime = expirationDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+  };
+
   return (
-    <div className="py-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Comprehensive overview of food waste prevention metrics and actions.
-        </p>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Stats Cards */}
-        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Expiring Soon Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg border-l-4 border-yellow-500">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0 bg-yellow-100 rounded-md p-3">
-                  <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Items Expiring Soon</dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">
-                        {loading ? '...' : stats.expiringItems}
-                      </div>
-                      <div className="ml-2 flex items-baseline text-sm font-semibold text-yellow-600">
-                        <span>Needs attention</span>
-                      </div>
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Waste Prevented Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg border-l-4 border-green-500">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0 bg-green-100 rounded-md p-3">
-                  <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Waste Prevented</dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">
-                        {loading ? '...' : `${stats.wastePrevented} kg`}
-                      </div>
-                      <div className="ml-2 flex items-baseline text-sm font-semibold text-green-600">
-                        <span>This month</span>
-                      </div>
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Revenue Saved Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg border-l-4 border-blue-500">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0 bg-blue-100 rounded-md p-3">
-                  <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Revenue Saved</dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">
-                        {loading ? '...' : `$${stats.revenueSaved.toFixed(2)}`}
-                      </div>
-                      <div className="ml-2 flex items-baseline text-sm font-semibold text-blue-600">
-                        <span>This month</span>
-                      </div>
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Environmental Impact Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg border-l-4 border-purple-500">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0 bg-purple-100 rounded-md p-3">
-                  <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Environmental Impact</dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">
-                        {loading ? '...' : `${stats.environmentalImpact} kg CO₂e`}
-                      </div>
-                      <div className="ml-2 flex items-baseline text-sm font-semibold text-purple-600">
-                        <span>Emissions saved</span>
-                      </div>
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex gap-4 p-4">
+        {/* Sidebar */}
+        <div className="flex-shrink-0">
+          <div className="sticky top-4">
+            <Sidebar activeItem={activeTab} onItemSelect={handleTabChange} />
           </div>
         </div>
 
-        {/* AI Insights Card */}
-        <div className="mt-8">
-          <AIInsightsCard />
-        </div>
-
-        {/* Realtime Prediction Analysis */}
-        <div className="mt-8">
-          <RealtimePredictionAnalysis />
-        </div>
-
-        {/* Charts Section */}
-        <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
-          {/* Categories Chart */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">At-Risk Items by Category</h3>
-              <div className="mt-5 h-64">
-                <Bar 
-                  data={categoryData} 
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        display: false,
-                      },
-                    },
-                  }} 
-                />
+        {/* Main Content */}
+        <div className="flex-1 min-w-0">
+          {loading ? (
+            <div className="flex justify-center items-center h-96">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600 font-medium">Loading dashboard data...</p>
               </div>
             </div>
-          </div>
-
-          {/* 3D Scatter Plot */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">3D Spoilage Hotspots</h3>
-              <div className="mt-5">
-                <Scatter3DChart />
+          ) : (
+            <div className="space-y-8">
+              {/* Page Header */}
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-800">
+                      {activeTab === 'overview' && 'Dashboard Overview'}
+                      {activeTab === 'products' && 'Product Management'}
+                      {activeTab === 'image' && 'Image Prediction'}
+                      {activeTab === 'insights' && 'AI Insights'}
+                    </h1>
+                    <p className="text-gray-600 mt-1">
+                      {activeTab === 'overview' && 'Monitor your inventory and track waste prevention metrics'}
+                      {activeTab === 'products' && 'Manage product inventory and rescue actions'}
+                      {activeTab === 'image' && 'Analyze product images with AI-powered detection'}
+                      {activeTab === 'insights' && 'Get intelligent insights and recommendations'}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                      Live
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      Last updated: {new Date().toLocaleTimeString()}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Heatmap Chart */}
-        <div className="mt-5 bg-white overflow-hidden shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">Spoilage Heatmap Analysis</h3>
-            <div className="mt-5">
-              <HeatmapChart />
-            </div>
-          </div>
-        </div>
+              {/* Overview Tab */}
+              {activeTab === 'overview' && (
+                <div className="space-y-8">
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-white overflow-hidden shadow-lg rounded-2xl p-6 border-l-4 border-blue-500 transition-all hover:shadow-xl hover:transform hover:scale-105">
+                      <div className="flex items-center">
+                        <div className="p-3 rounded-xl bg-blue-100 text-blue-600">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div className="ml-5">
+                          <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Expiring Soon</p>
+                          <p className="text-3xl font-bold text-gray-800">{stats.expiringItems}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white overflow-hidden shadow-lg rounded-2xl p-6 border-l-4 border-green-500 transition-all hover:shadow-xl hover:transform hover:scale-105">
+                      <div className="flex items-center">
+                        <div className="p-3 rounded-xl bg-green-100 text-green-600">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                          </svg>
+                        </div>
+                        <div className="ml-5">
+                          <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Waste Prevented</p>
+                          <p className="text-3xl font-bold text-gray-800">{stats.wastePrevented} kg</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white overflow-hidden shadow-lg rounded-2xl p-6 border-l-4 border-yellow-500 transition-all hover:shadow-xl hover:transform hover:scale-105">
+                      <div className="flex items-center">
+                        <div className="p-3 rounded-xl bg-yellow-100 text-yellow-600">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div className="ml-5">
+                          <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Revenue Saved</p>
+                          <p className="text-3xl font-bold text-gray-800">{formatCurrency(stats.revenueSaved)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white overflow-hidden shadow-lg rounded-2xl p-6 border-l-4 border-purple-500 transition-all hover:shadow-xl hover:transform hover:scale-105">
+                      <div className="flex items-center">
+                        <div className="p-3 rounded-xl bg-purple-100 text-purple-600">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div className="ml-5">
+                          <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">CO₂ Saved</p>
+                          <p className="text-3xl font-bold text-gray-800">{stats.environmentalImpact} kg</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-        {/* Category Distribution Card */}
-        <div className="mt-8">
-          <CategoryDistributionCard />
-        </div>
+                  {/* Charts Section */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="bg-white p-6 rounded-2xl shadow-lg">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4">At-Risk Items by Category</h3>
+                      <div className="h-64">
+                        <Bar 
+                          data={categoryData} 
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                display: false
+                              }
+                            }
+                          }} 
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-2xl shadow-lg">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4">Rescue Actions Distribution</h3>
+                      <div className="h-64 flex justify-center">
+                        <Doughnut 
+                          data={rescueData} 
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                position: 'right'
+                              }
+                            }
+                          }} 
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-        {/* At-Risk Products Table */}
-        <div className="mt-8 bg-white shadow overflow-hidden sm:rounded-lg">
-          <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">At-Risk Products</h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">Items requiring immediate attention</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Expiration
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stock
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                      Loading...
-                    </td>
-                  </tr>
-                ) : atRiskProducts.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                      No at-risk products found
-                    </td>
-                  </tr>
-                ) : (
-                  atRiskProducts.map((product) => (
-                    <tr key={product._id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {product.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {product.category}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(product.expirationDate).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {product.quantityInStock} {product.unit}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                          ${product.rescueStatus === 'none' ? 'bg-yellow-100 text-yellow-800' : 
-                            product.rescueStatus === 'price-reduction' ? 'bg-blue-100 text-blue-800' :
-                            product.rescueStatus === 'food-bank-alert' ? 'bg-green-100 text-green-800' :
-                            'bg-red-100 text-red-800'}`}>
-                          {product.rescueStatus === 'none' ? 'No Action' :
-                           product.rescueStatus === 'price-reduction' ? 'Price Reduced' :
-                           product.rescueStatus === 'food-bank-alert' ? 'Food Bank Alert' :
-                           product.rescueStatus === 'employee-discount' ? 'Employee Discount' : 'Final Sale'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-indigo-600 hover:text-indigo-900 mr-3">
-                          Reduce Price
+                  {/* Trends Chart */}
+                  <div className="bg-white p-6 rounded-2xl shadow-lg">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Monthly Trends</h3>
+                    <div className="h-80">
+                      <Line 
+                        data={trendsData} 
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'top'
+                            }
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true
+                            }
+                          }
+                        }} 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Product Gallery */}
+                  <div className="bg-white p-6 rounded-2xl shadow-lg">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-lg font-semibold text-gray-800">At-Risk Products</h3>
+                      <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                        {atRiskProducts.length} Items
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {atRiskProducts.slice(0, 8).map((product) => (
+                        <div key={product._id} className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden hover:shadow-lg transition-all duration-200 hover:transform hover:scale-105">
+                          <div className="h-48 overflow-hidden relative">
+                            <img 
+                              src={product.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image'} 
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = 'https://via.placeholder.com/300x200?text=No+Image';
+                              }}
+                            />
+                            {product.discountPercentage > 0 && (
+                              <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-md">
+                                {product.discountPercentage}% OFF
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-4">
+                            <div className="flex justify-between items-start mb-1">
+                              <h4 className="text-sm font-semibold text-gray-800 line-clamp-2">{product.name}</h4>
+                              <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadgeClass(product.rescueStatus)}`}>
+                                {product.rescueStatus === 'none' ? 'No Action' : product.rescueStatus.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center mt-2">
+                              <div>
+                                <p className="text-xs text-gray-500">{product.category} • {product.subCategory}</p>
+                                <div className="flex items-center mt-1">
+                                  {product.currentPrice !== product.price ? (
+                                    <>
+                                      <span className="text-sm font-bold text-gray-800">{formatCurrency(product.currentPrice)}</span>
+                                      <span className="text-xs text-gray-500 line-through ml-2">{formatCurrency(product.price)}</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-sm font-bold text-gray-800">{formatCurrency(product.price)}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-gray-500">Expires</p>
+                                <p className={`text-xs font-medium ${getDaysUntilExpiration(product.expirationDate) <= 3 ? 'text-red-600' : 'text-gray-700'}`}>
+                                  {formatDate(product.expirationDate)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="mt-3 flex justify-between items-center">
+                              <div className="text-xs text-gray-500">
+                                Stock: <span className="font-medium">{product.quantityInStock}</span>
+                              </div>
+                              <button className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors">
+                                Take Action
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {atRiskProducts.length > 8 && (
+                      <div className="mt-6 text-center">
+                        <button 
+                          onClick={() => setActiveTab('products')}
+                          className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                        >
+                          View All {atRiskProducts.length} At-Risk Products
                         </button>
-                        <button className="text-green-600 hover:text-green-900">
-                          Donate
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Products Tab */}
+              {activeTab === 'products' && (
+                <div className="bg-white rounded-2xl shadow-lg">
+                  <ProductManagement />
+                </div>
+              )}
+
+              {/* Image Prediction Tab */}
+              {activeTab === 'image' && (
+                <div className="bg-white rounded-2xl shadow-lg">
+                  <ImagePrediction />
+                </div>
+              )}
+
+              {/* Insights Tab */}
+              {activeTab === 'insights' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <AIInsightsCard />
+                  <CategoryDistributionCard />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
