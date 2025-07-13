@@ -19,6 +19,8 @@ import CategoryDistributionCard from './CategoryDistributionCard';
 import ImagePrediction from './ImagePrediction';
 import ProductManagement from './ProductManagement';
 import Sidebar from './Sidebar';
+import HeatmapChart from './HeatmapChart';
+import GeoChart from './GeoChart';
 
 // Register ChartJS components
 ChartJS.register(
@@ -491,7 +493,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* Trends Chart */}
-                  <div className="bg-white p-6 rounded-2xl shadow-lg">
+              <div className="bg-white p-6 rounded-2xl shadow-lg">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Monthly Trends</h3>
                 <div className="h-80">
                   <Line 
@@ -511,6 +513,16 @@ const AdminDashboard = () => {
                       }
                     }} 
                   />
+                </div>
+              </div>
+
+              {/* Heatmap and Geo Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="bg-white p-6 rounded-2xl shadow-lg">
+                  <HeatmapChart />
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-lg">
+                  <GeoChart />
                 </div>
               </div>
 
