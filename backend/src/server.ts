@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.routes';
 import productRoutes from './routes/productRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import aimlRoutes from './routes/aimlRoutes';
+import rescueRoutes from './routes/rescueRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -55,6 +56,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/aiml', aimlRoutes);
+app.use('/api/rescue', rescueRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -85,4 +87,6 @@ app.listen(PORT, () => {
   console.log('- GET /api/products');
   console.log('- GET /api/dashboard');
   console.log('- GET /api/aiml');
+  console.log('- GET /api/rescue');
+  console.log('- POST /api/rescue/cascade');
 }); 

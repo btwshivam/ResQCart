@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Auth from './pages/Auth';
 import { authService } from './services/auth.service';
-import { AdminDashboard, AIInsightsCard, CategoryDistributionCard } from './components/dashboard';
+import { AdminDashboard, AIInsightsCard, CategoryDistributionCard, StoreManagerInterface } from './components/dashboard';
 import VideoPrediction from './components/VideoPrediction';
 import RescueNetwork from './components/rescue/RescueNetwork';
+import FoodBankPortal from './components/foodbank/FoodBankPortal';
 import WasteReductionAnalytics from './components/analytics/WasteReductionAnalytics';
 import './App.css';
 
@@ -28,6 +29,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactEleme
 const DashboardContainer = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
   const navigate = useNavigate();
   const user = authService.getCurrentUser();
 
@@ -36,10 +38,27 @@ const DashboardContainer = () => {
     navigate('/auth');
   };
 
+  const handleNavigateToStoreManager = (productId?: string) => {
+    setSelectedProductId(productId);
+    setActiveTab('store');
+    
+    // Scroll to top when navigating to store manager
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
+  };
+
+  // Scroll to top when activeTab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeTab]);
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'predictions', label: 'Predictions', icon: '🔮' },
     { id: 'video', label: 'Realtime Prediction', icon: '🎥' },
+    { id: 'store', label: 'Store Manager', icon: '🏪' },
+    { id: 'foodbank', label: 'Food Bank Portal', icon: '🍎' },
     { id: 'rescue', label: 'Rescue', icon: '🚚' },
     { id: 'analytics', label: 'Analytics', icon: '📈' }
   ];
@@ -136,7 +155,8 @@ const DashboardContainer = () => {
                     {item.label}
                   </button>
                 ))}
-                <div className="pt-4 pb-2 border-t border-gray-100">
+                
+                <div className="pt-4 border-t border-gray-200">
                   <div className="flex items-center px-3 py-2">
                     <span className="text-sm font-medium text-gray-700">
                       Welcome, <span className="font-semibold text-blue-600">{user?.firstName}</span>
@@ -158,7 +178,7 @@ const DashboardContainer = () => {
         </div>
       </header>
 
-      <main className="flex-grow">
+      <main className="flex-1">
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 sm:px-0 mb-6">
             <h1 className="text-2xl font-bold text-gray-900">
@@ -168,7 +188,7 @@ const DashboardContainer = () => {
             <div className="h-1 w-24 bg-gradient-to-r from-green-500 to-blue-500 rounded mt-2"></div>
           </div>
           
-          {activeTab === 'dashboard' && <AdminDashboard />}
+          {activeTab === 'dashboard' && <AdminDashboard onNavigateToStoreManager={handleNavigateToStoreManager} />}
           
           {activeTab === 'predictions' && (
             <div className="px-4 py-6 sm:px-0">
@@ -185,16 +205,13 @@ const DashboardContainer = () => {
           
           {activeTab === 'video' && <VideoPrediction />}
           
+          {activeTab === 'store' && <StoreManagerInterface selectedProductId={selectedProductId} />}
+          
+          {activeTab === 'foodbank' && <FoodBankPortal />}
+          
           {activeTab === 'rescue' && <RescueNetwork />} 
 
           {activeTab === 'analytics' && <WasteReductionAnalytics />}
-          
-          {activeTab === 'analytics' && (
-            <div className="px-4 py-6 sm:px-0">
-              <h2 className="text-2xl font-semibold text-gray-900">Waste Reduction Analytics</h2>
-              <p className="mt-2 text-gray-600">Performance metrics and historical data will be displayed here.</p>
-            </div>
-          )}
         </div>
       </main>
       
@@ -215,8 +232,11 @@ const DashboardContainer = () => {
               </svg>
             </a>
           </div>
-          <div className="mt-4 md:mt-0">
-            <p className="text-center md:text-right text-sm text-gray-400">&copy; 2025 ResQCart: Food Waste Prediction & Rescue Network</p>
+          
+          <div className="mt-8 md:mt-0 md:order-1">
+            <p className="text-center text-base text-gray-400">
+              &copy; 2024 ResQCart. All rights reserved.
+            </p>
           </div>
         </div>
       </footer>
