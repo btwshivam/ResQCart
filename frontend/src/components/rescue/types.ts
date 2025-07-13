@@ -6,6 +6,8 @@ export interface NGO {
   place_id: string;
   distance?: string;
   duration?: string;
+  rating?: number;
+  types?: string[];
 }
 
 export interface Location {

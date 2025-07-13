@@ -347,19 +347,19 @@ const AdminDashboard = () => {
         <div className="flex-shrink-0">
           <div className="sticky top-4">
             <Sidebar activeItem={activeTab} onItemSelect={handleTabChange} />
-          </div>
         </div>
+      </div>
 
         {/* Main Content */}
         <div className="flex-1 min-w-0">
-          {loading ? (
+      {loading ? (
             <div className="flex justify-center items-center h-96">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
                 <p className="text-gray-600 font-medium">Loading dashboard data...</p>
               </div>
-            </div>
-          ) : (
+        </div>
+      ) : (
             <div className="space-y-8">
               {/* Page Header */}
               <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -389,233 +389,233 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Overview Tab */}
-              {activeTab === 'overview' && (
+          {/* Overview Tab */}
+          {activeTab === 'overview' && (
                 <div className="space-y-8">
-                  {/* Stats Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="bg-white overflow-hidden shadow-lg rounded-2xl p-6 border-l-4 border-blue-500 transition-all hover:shadow-xl hover:transform hover:scale-105">
-                      <div className="flex items-center">
+                  <div className="flex items-center">
                         <div className="p-3 rounded-xl bg-blue-100 text-blue-600">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        <div className="ml-5">
-                          <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Expiring Soon</p>
-                          <p className="text-3xl font-bold text-gray-800">{stats.expiringItems}</p>
-                        </div>
-                      </div>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
                     </div>
-                    
-                    <div className="bg-white overflow-hidden shadow-lg rounded-2xl p-6 border-l-4 border-green-500 transition-all hover:shadow-xl hover:transform hover:scale-105">
-                      <div className="flex items-center">
-                        <div className="p-3 rounded-xl bg-green-100 text-green-600">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                          </svg>
-                        </div>
-                        <div className="ml-5">
-                          <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Waste Prevented</p>
-                          <p className="text-3xl font-bold text-gray-800">{stats.wastePrevented} kg</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white overflow-hidden shadow-lg rounded-2xl p-6 border-l-4 border-yellow-500 transition-all hover:shadow-xl hover:transform hover:scale-105">
-                      <div className="flex items-center">
-                        <div className="p-3 rounded-xl bg-yellow-100 text-yellow-600">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        <div className="ml-5">
-                          <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Revenue Saved</p>
-                          <p className="text-3xl font-bold text-gray-800">{formatCurrency(stats.revenueSaved)}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white overflow-hidden shadow-lg rounded-2xl p-6 border-l-4 border-purple-500 transition-all hover:shadow-xl hover:transform hover:scale-105">
-                      <div className="flex items-center">
-                        <div className="p-3 rounded-xl bg-purple-100 text-purple-600">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        <div className="ml-5">
-                          <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">CO₂ Saved</p>
-                          <p className="text-3xl font-bold text-gray-800">{stats.environmentalImpact} kg</p>
-                        </div>
-                      </div>
+                    <div className="ml-5">
+                      <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Expiring Soon</p>
+                      <p className="text-3xl font-bold text-gray-800">{stats.expiringItems}</p>
                     </div>
                   </div>
+                </div>
+                
+                    <div className="bg-white overflow-hidden shadow-lg rounded-2xl p-6 border-l-4 border-green-500 transition-all hover:shadow-xl hover:transform hover:scale-105">
+                  <div className="flex items-center">
+                        <div className="p-3 rounded-xl bg-green-100 text-green-600">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                      </svg>
+                    </div>
+                    <div className="ml-5">
+                      <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Waste Prevented</p>
+                      <p className="text-3xl font-bold text-gray-800">{stats.wastePrevented} kg</p>
+                    </div>
+                  </div>
+                </div>
+                
+                    <div className="bg-white overflow-hidden shadow-lg rounded-2xl p-6 border-l-4 border-yellow-500 transition-all hover:shadow-xl hover:transform hover:scale-105">
+                  <div className="flex items-center">
+                        <div className="p-3 rounded-xl bg-yellow-100 text-yellow-600">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="ml-5">
+                      <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Revenue Saved</p>
+                      <p className="text-3xl font-bold text-gray-800">{formatCurrency(stats.revenueSaved)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                    <div className="bg-white overflow-hidden shadow-lg rounded-2xl p-6 border-l-4 border-purple-500 transition-all hover:shadow-xl hover:transform hover:scale-105">
+                  <div className="flex items-center">
+                        <div className="p-3 rounded-xl bg-purple-100 text-purple-600">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="ml-5">
+                      <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">CO₂ Saved</p>
+                      <p className="text-3xl font-bold text-gray-800">{stats.environmentalImpact} kg</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                  {/* Charts Section */}
+              {/* Charts Section */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div className="bg-white p-6 rounded-2xl shadow-lg">
-                      <h3 className="text-lg font-semibold text-gray-800 mb-4">At-Risk Items by Category</h3>
-                      <div className="h-64">
-                        <Bar 
-                          data={categoryData} 
-                          options={{
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                              legend: {
-                                display: false
-                              }
-                            }
-                          }} 
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white p-6 rounded-2xl shadow-lg">
-                      <h3 className="text-lg font-semibold text-gray-800 mb-4">Rescue Actions Distribution</h3>
-                      <div className="h-64 flex justify-center">
-                        <Doughnut 
-                          data={rescueData} 
-                          options={{
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                              legend: {
-                                position: 'right'
-                              }
-                            }
-                          }} 
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Trends Chart */}
-                  <div className="bg-white p-6 rounded-2xl shadow-lg">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Monthly Trends</h3>
-                    <div className="h-80">
-                      <Line 
-                        data={trendsData} 
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              position: 'top'
-                            }
-                          },
-                          scales: {
-                            y: {
-                              beginAtZero: true
-                            }
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">At-Risk Items by Category</h3>
+                  <div className="h-64">
+                    <Bar 
+                      data={categoryData} 
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            display: false
                           }
-                        }} 
-                      />
-                    </div>
+                        }
+                      }} 
+                    />
                   </div>
+                </div>
+                
+                    <div className="bg-white p-6 rounded-2xl shadow-lg">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Rescue Actions Distribution</h3>
+                  <div className="h-64 flex justify-center">
+                    <Doughnut 
+                      data={rescueData} 
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            position: 'right'
+                          }
+                        }
+                      }} 
+                    />
+                  </div>
+                </div>
+              </div>
 
-                  {/* Product Gallery */}
+              {/* Trends Chart */}
                   <div className="bg-white p-6 rounded-2xl shadow-lg">
-                    <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-lg font-semibold text-gray-800">At-Risk Products</h3>
-                      <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
-                        {atRiskProducts.length} Items
-                      </span>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {atRiskProducts.slice(0, 8).map((product) => (
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Monthly Trends</h3>
+                <div className="h-80">
+                  <Line 
+                    data={trendsData} 
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'top'
+                        }
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true
+                        }
+                      }
+                    }} 
+                  />
+                </div>
+              </div>
+
+              {/* Product Gallery */}
+                  <div className="bg-white p-6 rounded-2xl shadow-lg">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-semibold text-gray-800">At-Risk Products</h3>
+                  <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                    {atRiskProducts.length} Items
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {atRiskProducts.slice(0, 8).map((product) => (
                         <div key={product._id} className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden hover:shadow-lg transition-all duration-200 hover:transform hover:scale-105">
-                          <div className="h-48 overflow-hidden relative">
-                            <img 
-                              src={product.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image'} 
-                              alt={product.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = 'https://via.placeholder.com/300x200?text=No+Image';
-                              }}
-                            />
-                            {product.discountPercentage > 0 && (
-                              <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-md">
-                                {product.discountPercentage}% OFF
-                              </div>
-                            )}
+                      <div className="h-48 overflow-hidden relative">
+                        <img 
+                          src={product.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image'} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'https://via.placeholder.com/300x200?text=No+Image';
+                          }}
+                        />
+                        {product.discountPercentage > 0 && (
+                          <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-md">
+                            {product.discountPercentage}% OFF
                           </div>
-                          <div className="p-4">
-                            <div className="flex justify-between items-start mb-1">
-                              <h4 className="text-sm font-semibold text-gray-800 line-clamp-2">{product.name}</h4>
-                              <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadgeClass(product.rescueStatus)}`}>
-                                {product.rescueStatus === 'none' ? 'No Action' : product.rescueStatus.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                              </span>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-1">
+                          <h4 className="text-sm font-semibold text-gray-800 line-clamp-2">{product.name}</h4>
+                          <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadgeClass(product.rescueStatus)}`}>
+                            {product.rescueStatus === 'none' ? 'No Action' : product.rescueStatus.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center mt-2">
+                          <div>
+                            <p className="text-xs text-gray-500">{product.category} • {product.subCategory}</p>
+                            <div className="flex items-center mt-1">
+                              {product.currentPrice !== product.price ? (
+                                <>
+                                  <span className="text-sm font-bold text-gray-800">{formatCurrency(product.currentPrice)}</span>
+                                  <span className="text-xs text-gray-500 line-through ml-2">{formatCurrency(product.price)}</span>
+                                </>
+                              ) : (
+                                <span className="text-sm font-bold text-gray-800">{formatCurrency(product.price)}</span>
+                              )}
                             </div>
-                            <div className="flex justify-between items-center mt-2">
-                              <div>
-                                <p className="text-xs text-gray-500">{product.category} • {product.subCategory}</p>
-                                <div className="flex items-center mt-1">
-                                  {product.currentPrice !== product.price ? (
-                                    <>
-                                      <span className="text-sm font-bold text-gray-800">{formatCurrency(product.currentPrice)}</span>
-                                      <span className="text-xs text-gray-500 line-through ml-2">{formatCurrency(product.price)}</span>
-                                    </>
-                                  ) : (
-                                    <span className="text-sm font-bold text-gray-800">{formatCurrency(product.price)}</span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-xs text-gray-500">Expires</p>
-                                <p className={`text-xs font-medium ${getDaysUntilExpiration(product.expirationDate) <= 3 ? 'text-red-600' : 'text-gray-700'}`}>
-                                  {formatDate(product.expirationDate)}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="mt-3 flex justify-between items-center">
-                              <div className="text-xs text-gray-500">
-                                Stock: <span className="font-medium">{product.quantityInStock}</span>
-                              </div>
-                              <button className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors">
-                                Take Action
-                              </button>
-                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500">Expires</p>
+                            <p className={`text-xs font-medium ${getDaysUntilExpiration(product.expirationDate) <= 3 ? 'text-red-600' : 'text-gray-700'}`}>
+                              {formatDate(product.expirationDate)}
+                            </p>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                    
-                    {atRiskProducts.length > 8 && (
-                      <div className="mt-6 text-center">
-                        <button 
-                          onClick={() => setActiveTab('products')}
-                          className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
-                        >
-                          View All {atRiskProducts.length} At-Risk Products
-                        </button>
+                        <div className="mt-3 flex justify-between items-center">
+                          <div className="text-xs text-gray-500">
+                            Stock: <span className="font-medium">{product.quantityInStock}</span>
+                          </div>
+                          <button className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors">
+                            Take Action
+                          </button>
+                        </div>
                       </div>
-                    )}
+                    </div>
+                  ))}
+                </div>
+                
+                {atRiskProducts.length > 8 && (
+                  <div className="mt-6 text-center">
+                    <button 
+                      onClick={() => setActiveTab('products')}
+                      className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                    >
+                      View All {atRiskProducts.length} At-Risk Products
+                    </button>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+            </div>
+          )}
 
-              {/* Products Tab */}
-              {activeTab === 'products' && (
+          {/* Products Tab */}
+          {activeTab === 'products' && (
                 <div className="bg-white rounded-2xl shadow-lg">
-                  <ProductManagement />
+            <ProductManagement />
                 </div>
-              )}
+          )}
 
               {/* Image Prediction Tab */}
               {activeTab === 'image' && (
                 <div className="bg-white rounded-2xl shadow-lg">
                   <ImagePrediction />
                 </div>
-              )}
+          )}
 
-              {/* Insights Tab */}
-              {activeTab === 'insights' && (
+          {/* Insights Tab */}
+          {activeTab === 'insights' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <AIInsightsCard />
-                  <CategoryDistributionCard />
+              <AIInsightsCard />
+              <CategoryDistributionCard />
                 </div>
               )}
             </div>

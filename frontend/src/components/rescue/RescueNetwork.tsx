@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MapPinIcon, TruckIcon, ClockIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import { rescueApi } from '../../services/api';
 import type { NGO, RouteInfo, UserLocation } from '../../types/rescue';
@@ -41,13 +41,24 @@ const RescueNetwork: React.FC = () => {
       (error) => {
         console.error('Error getting location:', error);
         setLocationPermission('denied');
-        setError('Unable to get your location. Please enable location services and try again.');
+        
+        // Provide more specific error messages
+        let errorMessage = 'Unable to get your location. Please enable location services and try again.';
+        if (error.code === 1) {
+          errorMessage = 'Location access denied. Please allow location access in your browser settings.';
+        } else if (error.code === 2) {
+          errorMessage = 'Location unavailable. Please check your device location settings.';
+        } else if (error.code === 3) {
+          errorMessage = 'Location request timed out. Please try again or check your internet connection.';
+        }
+        
+        setError(errorMessage);
         setLoading(false);
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000,
+        enableHighAccuracy: false, // Changed to false for faster response
+        timeout: 30000, // Increased to 30 seconds
+        maximumAge: 300000, // Increased to 5 minutes
       }
     );
   };
@@ -154,16 +165,33 @@ const RescueNetwork: React.FC = () => {
         ) : locationPermission === 'denied' ? (
           <div className="text-sm text-amber-600">
             <p>Location access denied. You can still search for NGOs by entering an address manually.</p>
-            <input
-              type="text"
-              placeholder="Enter your address or location"
-              className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleManualLocationSearch((e.target as HTMLInputElement).value);
-                }
-              }}
-            />
+            <div className="mt-2 space-y-2">
+              <input
+                type="text"
+                placeholder="Enter your address or location"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleManualLocationSearch((e.target as HTMLInputElement).value);
+                  }
+                }}
+              />
+              <button
+                onClick={() => {
+                  // Use a default location (New York City) for demonstration
+                  const defaultLocation: UserLocation = {
+                    lat: 40.7128,
+                    lng: -74.0060,
+                  };
+                  setUserLocation(defaultLocation);
+                  setLocationPermission('granted');
+                  findNearbyNGOs(defaultLocation.lat, defaultLocation.lng);
+                }}
+                className="w-full px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm"
+              >
+                Use Demo Location (New York City)
+              </button>
+            </div>
           </div>
         ) : (
           <p className="text-sm text-gray-500">
@@ -180,8 +208,26 @@ const RescueNetwork: React.FC = () => {
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
             </div>
-            <div className="ml-3">
+            <div className="ml-3 flex-1">
               <p className="text-sm text-red-800">{error}</p>
+              {!userLocation && (
+                <button
+                  onClick={() => {
+                    // Use a default location (New York City) for demonstration
+                    const defaultLocation: UserLocation = {
+                      lat: 40.7128,
+                      lng: -74.0060,
+                    };
+                    setUserLocation(defaultLocation);
+                    setLocationPermission('granted');
+                    setError(null);
+                    findNearbyNGOs(defaultLocation.lat, defaultLocation.lng);
+                  }}
+                  className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 transition-colors"
+                >
+                  Use Demo Location Instead
+                </button>
+              )}
             </div>
           </div>
         </div>

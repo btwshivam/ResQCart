@@ -4,6 +4,8 @@ export interface NGO {
   lat: number;
   lng: number;
   place_id: string;
+  rating?: number;
+  types?: string[];
 }
 
 export interface RouteStep {

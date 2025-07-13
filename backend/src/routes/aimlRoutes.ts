@@ -46,4 +46,8 @@ router.post('/detect', proxyToAIML);
 router.post('/predict_milk_spoilage', proxyToAIML);
 router.post('/process_video_frame', proxyToAIML);
 
+// Rescue network routes
+router.post('/nearby-ngos', proxyToAIML);
+router.post('/route', proxyToAIML);
+
 export default router; 

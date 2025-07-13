@@ -90,11 +90,11 @@ export const dashboardApi = {
 export const rescueApi = {
   // Find nearby NGOs
   getNearbyNGOs: (lat: number, lng: number) => 
-    api.post('/nearby-ngos', { lat, lng }),
+    api.post('/aiml/nearby-ngos', { lat, lng }),
 
   // Get directions to NGO
   getRoute: (originLat: number, originLng: number, destLat: number, destLng: number) =>
-    api.post('/route', {
+    api.post('/aiml/route', {
       origin_lat: originLat,
       origin_lng: originLng,
       dest_lat: destLat,
