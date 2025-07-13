@@ -79,39 +79,41 @@ const DashboardContainer = () => {
             </div>
             
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-2">
-              {navItems.map((item) => (
+            <nav className="hidden md:flex flex-1 justify-center px-2">
+              <div className="flex justify-between items-center w-full max-w-5xl">
+                {navItems.map((item) => (
                 <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center space-x-2 ${
-                    activeTab === item.id
-                      ? 'bg-gradient-to-r from-green-50 to-blue-50 text-blue-600 shadow-sm border border-blue-100 transform scale-105'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center space-x-1 whitespace-nowrap ${
+                      activeTab === item.id
+                        ? 'bg-gradient-to-r from-green-50 to-blue-50 text-blue-600 shadow-sm border border-blue-100 transform scale-105'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >
-                  <span className="text-lg">{item.icon}</span>
-                  <span>{item.label}</span>
+                    <span className="text-lg">{item.icon}</span>
+                    <span>{item.label}</span>
                 </button>
               ))}
+              </div>
             </nav>
             
             {/* User Menu & Mobile Menu Button */}
-            <div className="flex items-center">
+            <div className="flex items-center ml-4">
               <div className="hidden md:flex items-center">
                 <div className="mr-4 px-3 py-2 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-blue-50">
                   <span className="text-sm font-medium text-gray-700">
                     Welcome, <span className="font-semibold text-blue-600">{user?.firstName}</span>
                   </span>
                 </div>
-                <button 
-                  onClick={handleLogout}
+              <button 
+                onClick={handleLogout}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 transition-all duration-200 hover:shadow-md"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
-                  Sign Out
+                Sign Out
                 </button>
               </div>
               
@@ -210,7 +212,7 @@ const DashboardContainer = () => {
           {activeTab === 'foodbank' && <FoodBankPortal />}
           
           {activeTab === 'rescue' && <RescueNetwork />} 
-
+          
           {activeTab === 'analytics' && <WasteReductionAnalytics />}
         </div>
       </main>

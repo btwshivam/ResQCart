@@ -118,11 +118,11 @@ const StoreManagerInterface: React.FC<StoreManagerInterfaceProps> = ({ selectedP
       setError('Please select at least one product.');
       return;
     }
-
+    
     try {
       setLoading(true);
       setError(null);
-
+      
       // Use manual input if provided, otherwise generate random discount
       let appliedDiscount = discountPercentage;
       if (!appliedDiscount) {
@@ -160,7 +160,7 @@ const StoreManagerInterface: React.FC<StoreManagerInterfaceProps> = ({ selectedP
             discountPercentage: appliedDiscount,
             rescueStatus: 'price-reduction'
           };
-        }
+      }
         return product;
       });
 
