@@ -7,6 +7,7 @@ import GeoChart from './GeoChart';
 import ProductManagement from './ProductManagement';
 import Sidebar from './Sidebar';
 import ImagePrediction from './ImagePrediction';
+import StoreManagerInterface from './StoreManagerInterface';
 
 export {
   AdminDashboard,
@@ -17,5 +18,6 @@ export {
   GeoChart,
   ProductManagement,
   Sidebar,
-  ImagePrediction
+  ImagePrediction,
+  StoreManagerInterface
 }; 

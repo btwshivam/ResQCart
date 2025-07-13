@@ -3,9 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import { Toaster } from 'react-hot-toast';
 import Auth from './pages/Auth';
 import { authService } from './services/auth.service';
-import { AdminDashboard, AIInsightsCard, CategoryDistributionCard } from './components/dashboard';
+import { AdminDashboard, AIInsightsCard, CategoryDistributionCard, StoreManagerInterface } from './components/dashboard';
 import VideoPrediction from './components/VideoPrediction';
 import RescueNetwork from './components/rescue/RescueNetwork';
+import FoodBankPortal from './components/foodbank/FoodBankPortal';
 import WasteReductionAnalytics from './components/analytics/WasteReductionAnalytics';
 import './App.css';
 
@@ -40,6 +41,8 @@ const DashboardContainer = () => {
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'predictions', label: 'Predictions', icon: '🔮' },
     { id: 'video', label: 'Realtime Prediction', icon: '🎥' },
+    { id: 'store', label: 'Store Manager', icon: '🏪' },
+    { id: 'foodbank', label: 'Food Bank Portal', icon: '🍎' },
     { id: 'rescue', label: 'Rescue', icon: '🚚' },
     { id: 'analytics', label: 'Analytics', icon: '📈' }
   ];
@@ -185,16 +188,13 @@ const DashboardContainer = () => {
           
           {activeTab === 'video' && <VideoPrediction />}
           
+          {activeTab === 'store' && <StoreManagerInterface />}
+          
+          {activeTab === 'foodbank' && <FoodBankPortal />}
+          
           {activeTab === 'rescue' && <RescueNetwork />} 
 
           {activeTab === 'analytics' && <WasteReductionAnalytics />}
-          
-          {activeTab === 'analytics' && (
-            <div className="px-4 py-6 sm:px-0">
-              <h2 className="text-2xl font-semibold text-gray-900">Waste Reduction Analytics</h2>
-              <p className="mt-2 text-gray-600">Performance metrics and historical data will be displayed here.</p>
-            </div>
-          )}
         </div>
       </main>
       
