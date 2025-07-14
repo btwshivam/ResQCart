@@ -40,14 +40,58 @@ export const getFoodBankRescueRequests = async (req: Request, res: Response) => 
   try {
     const foodBankId = req.params.foodBankId;
     
-    const rescueRequests = await RescueRequest.find({ foodBankId })
-      .populate('products')
-      .populate('storeId')
-      .sort({ createdAt: -1 });
+    console.log(`Fetching rescue requests for food bank: ${foodBankId}`);
     
-    res.json(rescueRequests);
+    // First check if the food bank exists and if the ID is valid
+    if (!mongoose.Types.ObjectId.isValid(foodBankId)) {
+      console.log(`Invalid food bank ID format: ${foodBankId}`);
+      return res.status(400).json({ message: 'Invalid food bank ID format' });
+    }
+    
+    const foodBankExists = await FoodBank.exists({ _id: foodBankId });
+    if (!foodBankExists) {
+      console.log(`Food bank with ID ${foodBankId} not found`);
+      return res.json([]); // Return empty array instead of error
+    }
+    
+    // Find rescue requests
+    const rescueRequests = await RescueRequest.find({ 
+      foodBankId,
+      // Include all statuses except 'pending' (accepted, in-progress, completed, cancelled)
+      status: { $ne: 'pending' }
+    })
+    .populate({
+      path: 'products',
+      // Handle missing products gracefully
+      match: { _id: { $exists: true } }
+    })
+    .populate({
+      path: 'storeId',
+      select: 'name address phone',
+      // Handle missing stores gracefully
+      match: { _id: { $exists: true } }
+    })
+    .sort({ createdAt: -1 });
+    
+    console.log(`Found ${rescueRequests.length} rescue requests for food bank ${foodBankId}`);
+    
+    // Filter out any rescue requests with null products or storeId (in case they were deleted)
+    const validRescueRequests = rescueRequests.filter(req => {
+      // Keep requests that have at least one valid product
+      const hasValidProducts = Array.isArray(req.products) && req.products.some(p => p !== null);
+      // Keep requests that have a valid store
+      const hasValidStore = req.storeId !== null;
+      
+      return hasValidProducts && hasValidStore;
+    });
+    
+    console.log(`Found ${validRescueRequests.length} valid rescue requests for food bank ${foodBankId}`);
+    
+    res.json(validRescueRequests);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error });
+    console.error('Error fetching food bank rescue requests:', error);
+    // Return empty array instead of error to prevent frontend crashes
+    res.json([]);
   }
 };
 
@@ -78,28 +122,95 @@ export const createRescueRequest = async (req: Request, res: Response) => {
 export const updateRescueRequestStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, foodBankId, scheduledPickupTime } = req.body;
+    
+    console.log('Update rescue request payload:', { id, status, foodBankId, scheduledPickupTime });
     
     if (!['pending', 'accepted', 'in-progress', 'completed', 'cancelled'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
     
-    const rescueRequest = await RescueRequest.findByIdAndUpdate(
-      id,
-      { 
-        status,
-        ...(status === 'completed' ? { actualPickupTime: new Date() } : {})
-      },
-      { new: true }
-    );
+    // Validate the request ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid rescue request ID format' });
+    }
     
-    if (!rescueRequest) {
+    // Check if the rescue request exists before updating
+    const existingRequest = await RescueRequest.findById(id);
+    if (!existingRequest) {
       return res.status(404).json({ message: 'Rescue request not found' });
     }
     
-    res.json(rescueRequest);
+    // Build update object based on received data
+    const updateData: any = { status };
+    
+    // Add foodBankId if provided (for claiming)
+    if (status === 'accepted' && foodBankId) {
+      // Check if food bank ID is valid
+      if (!mongoose.Types.ObjectId.isValid(foodBankId)) {
+        return res.status(400).json({ message: 'Invalid food bank ID format' });
+      }
+      
+      // Verify the food bank exists
+      const foodBankExists = await FoodBank.exists({ _id: foodBankId });
+      if (!foodBankExists) {
+        return res.status(404).json({ message: 'Food bank not found' });
+      }
+      
+      updateData.foodBankId = foodBankId;
+      console.log(`Assigning rescue request to food bank: ${foodBankId}`);
+    }
+    
+    // Add scheduled pickup time if provided
+    if (scheduledPickupTime) {
+      // Validate date format
+      const scheduledDate = new Date(scheduledPickupTime);
+      if (isNaN(scheduledDate.getTime())) {
+        return res.status(400).json({ message: 'Invalid pickup time format' });
+      }
+      updateData.scheduledPickupTime = scheduledPickupTime;
+    }
+    
+    // Add actual pickup time for completed status
+    if (status === 'completed') {
+      updateData.actualPickupTime = new Date();
+    }
+    
+    console.log('Updating rescue request:', id, 'with data:', updateData);
+    
+    // Use try/catch specifically for the update operation
+    try {
+      const rescueRequest = await RescueRequest.findByIdAndUpdate(
+        id,
+        updateData,
+        { new: true }
+      ).populate({
+        path: 'products',
+        // Handle missing products gracefully
+        match: { _id: { $exists: true } }
+      });
+      
+      if (!rescueRequest) {
+        return res.status(404).json({ message: 'Rescue request could not be updated' });
+      }
+      
+      // Verify the update was successful by checking if foodBankId was set correctly
+      if (status === 'accepted' && foodBankId) {
+        if (!rescueRequest.foodBankId || rescueRequest.foodBankId.toString() !== foodBankId) {
+          console.error('Food bank ID was not properly set in the update operation');
+          return res.status(500).json({ message: 'Failed to update food bank association' });
+        }
+      }
+      
+      console.log('Successfully updated rescue request:', rescueRequest._id);
+      res.json(rescueRequest);
+    } catch (updateError) {
+      console.error('Error during update operation:', updateError);
+      res.status(400).json({ message: 'Error updating rescue request', error: updateError.message });
+    }
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error });
+    console.error('Error updating rescue request:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 

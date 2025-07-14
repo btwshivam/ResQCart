@@ -3,8 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import { Toaster } from 'react-hot-toast';
 import Auth from './pages/Auth';
 import { authService } from './services/auth.service';
-import { AdminDashboard, AIInsightsCard, CategoryDistributionCard, StoreManagerInterface } from './components/dashboard';
-import VideoPrediction from './components/VideoPrediction';
+import { AdminDashboard, StoreManagerInterface } from './components/dashboard';
 import RescueNetwork from './components/rescue/RescueNetwork';
 import FoodBankPortal from './components/foodbank/FoodBankPortal';
 import WasteReductionAnalytics from './components/analytics/WasteReductionAnalytics';
@@ -55,8 +54,6 @@ const DashboardContainer = () => {
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'predictions', label: 'Predictions', icon: '🔮' },
-    { id: 'video', label: 'Realtime Prediction', icon: '🎥' },
     { id: 'store', label: 'Store Manager', icon: '🏪' },
     { id: 'foodbank', label: 'Food Bank Portal', icon: '🍎' },
     { id: 'rescue', label: 'Rescue', icon: '🚚' },
@@ -191,21 +188,6 @@ const DashboardContainer = () => {
           </div>
           
           {activeTab === 'dashboard' && <AdminDashboard onNavigateToStoreManager={handleNavigateToStoreManager} />}
-          
-          {activeTab === 'predictions' && (
-            <div className="px-4 py-6 sm:px-0">
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <AIInsightsCard />
-                <CategoryDistributionCard />
-              </div>
-              <div className="mt-6">
-                <h2 className="text-2xl font-semibold text-gray-900">AI Prediction Models</h2>
-                <p className="mt-2 text-gray-600">Advanced machine learning models to predict product spoilage and optimize inventory.</p>
-              </div>
-            </div>
-          )}
-          
-          {activeTab === 'video' && <VideoPrediction />}
           
           {activeTab === 'store' && <StoreManagerInterface selectedProductId={selectedProductId} />}
           

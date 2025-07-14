@@ -21,6 +21,7 @@ import ProductManagement from './ProductManagement';
 import Sidebar from './Sidebar';
 import HeatmapChart from './HeatmapChart';
 import GeoChart from './GeoChart';
+import VideoPrediction from '../VideoPrediction';
 
 // Register ChartJS components
 ChartJS.register(
@@ -381,12 +382,14 @@ const AdminDashboard = ({ onNavigateToStoreManager }: AdminDashboardProps) => {
                       {activeTab === 'overview' && 'Dashboard Overview'}
                       {activeTab === 'products' && 'Product Management'}
                       {activeTab === 'image' && 'Image Prediction'}
+                      {activeTab === 'realtime' && 'Realtime Prediction'}
                       {activeTab === 'insights' && 'AI Insights'}
                     </h1>
                     <p className="text-gray-600 mt-1">
                       {activeTab === 'overview' && 'Monitor your inventory and track waste prevention metrics'}
                       {activeTab === 'products' && 'Manage product inventory and rescue actions'}
                       {activeTab === 'image' && 'Analyze product images with AI-powered detection'}
+                      {activeTab === 'realtime' && 'Predict waste and revenue in real-time from video feeds'}
                       {activeTab === 'insights' && 'Get intelligent insights and recommendations'}
                     </p>
                   </div>
@@ -633,6 +636,13 @@ const AdminDashboard = ({ onNavigateToStoreManager }: AdminDashboardProps) => {
               {activeTab === 'image' && (
                 <div className="bg-white rounded-2xl shadow-lg">
                   <ImagePrediction />
+                </div>
+          )}
+
+              {/* Realtime Prediction Tab */}
+              {activeTab === 'realtime' && (
+                <div className="bg-white rounded-2xl shadow-lg">
+                  <VideoPrediction />
                 </div>
           )}
 

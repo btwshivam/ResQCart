@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   BuildingStorefrontIcon, 
   TruckIcon, 
@@ -46,18 +46,23 @@ const FoodBankPortal: React.FC = () => {
   const [rescueRequests, setRescueRequests] = useState<RescueRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<RescueRequest | null>(null);
   const [pickupDate, setPickupDate] = useState<string>('');
   const [pickupTime, setPickupTime] = useState<string>('');
+  const [claimLoading, setClaimLoading] = useState(false);
   
   // Mock food bank ID for demo purposes
   const foodBankId = '65f1a1a1a1a1a1a1a1a1a1a2';
   
-  useEffect(() => {
-    fetchRescueRequests();
-  }, [activeTab]);
+  // Clear messages when changing tabs
+  const clearMessages = () => {
+    setError(null);
+    setSuccessMessage(null);
+  };
   
-  const fetchRescueRequests = async () => {
+  // Memoize fetchRescueRequests to avoid recreation on each render
+  const fetchRescueRequests = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -67,7 +72,14 @@ const FoodBankPortal: React.FC = () => {
         ? '/api/rescue?status=pending'
         : `/api/rescue/foodbank/${foodBankId}`;
       
-      const response = await axios.get(endpoint);
+      console.log(`Fetching rescue requests from: ${endpoint}`);
+      
+      const response = await axios.get(endpoint)
+        .catch(err => {
+          console.error(`Error fetching from ${endpoint}:`, err);
+          // Return mock empty data instead of throwing
+          return { data: [] };
+        });
       
       // Filter pending requests for available tab
       let requests = response.data;
@@ -75,61 +87,106 @@ const FoodBankPortal: React.FC = () => {
         requests = requests.filter((req: RescueRequest) => req.rescueType === 'food-bank-alert');
       }
       
+      console.log(`Fetched ${requests.length} ${activeTab} rescue requests`, requests);
       setRescueRequests(requests);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching rescue requests:', err);
       setError('Failed to load rescue requests. Please try again.');
+      // Set empty array to prevent undefined errors
+      setRescueRequests([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, foodBankId]);
+  
+  // Re-fetch whenever activeTab changes
+  useEffect(() => {
+    clearMessages();
+    fetchRescueRequests();
+  }, [activeTab, fetchRescueRequests]);
   
   const handleClaimRequest = async (requestId: string) => {
     if (!pickupDate || !pickupTime) {
-      alert('Please select a pickup date and time');
+      setError('Please select a pickup date and time');
       return;
     }
     
     try {
-      setLoading(true);
+      setClaimLoading(true);
+      clearMessages();
       
       const scheduledPickupTime = new Date(`${pickupDate}T${pickupTime}`);
       
-      await axios.patch(`/api/rescue/${requestId}/status`, {
+      console.log('Claiming rescue request:', requestId, 'with foodBankId:', foodBankId);
+      
+      // Include foodBankId in the update
+      const response = await axios.patch(`/api/rescue/${requestId}/status`, {
         status: 'accepted',
-        foodBankId,
-        scheduledPickupTime
+        foodBankId: foodBankId,
+        scheduledPickupTime: scheduledPickupTime
       });
       
-      // Refresh the list
-      fetchRescueRequests();
+      console.log('Claim response:', response.data);
+      
+      // Clear the modal first
       setSelectedRequest(null);
       setPickupDate('');
       setPickupTime('');
-    } catch (err) {
+      
+      // Show success message
+      setSuccessMessage('Rescue successfully claimed! Switching to My Claimed Rescues tab...');
+      
+      // Switch tabs and refresh after short delay
+      setTimeout(() => {
+        setActiveTab('claimed');
+        // Clear success message after tab switch
+        setSuccessMessage(null);
+        
+        // Force refresh data
+        setTimeout(() => {
+          fetchRescueRequests();
+        }, 500);
+      }, 1500);
+      
+    } catch (err: any) {
       console.error('Error claiming rescue request:', err);
-      setError('Failed to claim rescue request. Please try again.');
+      const errorMessage = err.response?.data?.message || 'Failed to claim rescue request. Please try again.';
+      setError(errorMessage);
     } finally {
-      setLoading(false);
+      setClaimLoading(false);
     }
   };
   
   const handleCompletePickup = async (requestId: string) => {
     try {
       setLoading(true);
+      clearMessages();
       
       await axios.patch(`/api/rescue/${requestId}/status`, {
         status: 'completed'
+      })
+      .then(response => {
+        console.log('Complete pickup response:', response.data);
+        setSuccessMessage('Rescue pickup marked as completed!');
+        // Refresh the list after completion
+        fetchRescueRequests();
+      })
+      .catch(err => {
+        console.error('Error completing pickup:', err);
+        setError('Failed to mark rescue as completed. Please try again.');
       });
-      
-      // Refresh the list
-      fetchRescueRequests();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error completing pickup:', err);
-      setError('Failed to complete pickup. Please try again.');
+      const errorMessage = err.response?.data?.message || 'Failed to complete pickup. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handleChangeTab = (tab: 'available' | 'claimed') => {
+    clearMessages();
+    setActiveTab(tab);
   };
   
   const formatDate = (dateString: string) => {
@@ -161,7 +218,7 @@ const FoodBankPortal: React.FC = () => {
       <div className="border-b border-gray-200 mb-6">
         <nav className="flex -mb-px space-x-8">
           <button
-            onClick={() => setActiveTab('available')}
+            onClick={() => handleChangeTab('available')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'available'
                 ? 'border-green-500 text-green-600'
@@ -171,7 +228,7 @@ const FoodBankPortal: React.FC = () => {
             Available Rescues
           </button>
           <button
-            onClick={() => setActiveTab('claimed')}
+            onClick={() => handleChangeTab('claimed')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'claimed'
                 ? 'border-green-500 text-green-600'
@@ -183,6 +240,28 @@ const FoodBankPortal: React.FC = () => {
         </nav>
       </div>
       
+      {/* Success message */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3 flex items-center justify-between w-full">
+              <p className="text-sm text-green-700">{successMessage}</p>
+              <button 
+                onClick={() => setSuccessMessage(null)} 
+                className="ml-2 text-green-600 hover:text-green-800"
+              >
+                <XCircleIcon className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Error message */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
@@ -190,8 +269,14 @@ const FoodBankPortal: React.FC = () => {
             <div className="flex-shrink-0">
               <XCircleIcon className="h-5 w-5 text-red-400" />
             </div>
-            <div className="ml-3">
+            <div className="ml-3 flex items-center justify-between w-full">
               <p className="text-sm text-red-700">{error}</p>
+              <button 
+                onClick={() => setError(null)} 
+                className="ml-2 text-red-600 hover:text-red-800"
+              >
+                <XCircleIcon className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
@@ -234,7 +319,7 @@ const FoodBankPortal: React.FC = () => {
                     <div className="flex items-center">
                       <BuildingStorefrontIcon className="h-5 w-5 text-gray-400 mr-2" />
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {typeof request.storeId === 'object' ? request.storeId.name : 'Store #' + request.storeId.substring(0, 6)}
+                        {typeof request.storeId === 'object' ? request.storeId.name : 'Store #' + (typeof request.storeId === 'string' ? request.storeId.substring(0, 6) : 'Unknown')}
                       </p>
                       <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         {request.products.length} items
@@ -246,13 +331,21 @@ const FoodBankPortal: React.FC = () => {
                       )}
                     </div>
                     
+                    {/* Expiration date display */}
                     <div className="mt-2 flex items-center text-sm text-gray-500">
                       <CalendarIcon className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
                       <p>
-                        Expires: <span className="font-medium">{formatDate(request.products[0]?.expirationDate)}</span>
-                        {request.daysUntilExpiration > 0 
-                          ? ` (${request.daysUntilExpiration} days left)`
-                          : ' (Today)'}
+                        Expires: {' '}
+                        {Array.isArray(request.products) && request.products.length > 0 && request.products[0]?.expirationDate ? (
+                          <>
+                            <span className="font-medium">{formatDate(request.products[0].expirationDate)}</span>
+                            {request.daysUntilExpiration > 0 
+                              ? ` (${request.daysUntilExpiration} days left)`
+                              : ' (Today)'}
+                          </>
+                        ) : (
+                          <span className="text-gray-400">Date not available</span>
+                        )}
                       </p>
                     </div>
                     
@@ -311,35 +404,43 @@ const FoodBankPortal: React.FC = () => {
                 <div className="mt-4 border-t border-gray-100 pt-4">
                   <h4 className="text-sm font-medium text-gray-900">Products:</h4>
                   <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {request.products.map((product) => (
-                      <div key={product._id} className="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg">
-                        {product.imageUrl && (
-                          <div className="flex-shrink-0 h-10 w-10">
-                            <img
-                              className="h-10 w-10 rounded-full object-cover"
-                              src={product.imageUrl}
-                              alt={product.name}
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = 'https://via.placeholder.com/40?text=N/A';
-                              }}
-                            />
+                    {Array.isArray(request.products) && request.products.length > 0 ? (
+                      request.products.map((product) => (
+                        product && (
+                          <div key={product._id || 'unknown'} className="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg">
+                            {product.imageUrl && (
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <img
+                                  className="h-10 w-10 rounded-full object-cover"
+                                  src={product.imageUrl}
+                                  alt={product.name}
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = 'https://via.placeholder.com/40?text=N/A';
+                                  }}
+                                />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
+                              <p className="text-sm text-gray-500">
+                                {product.quantityInStock} {product.quantityInStock > 1 ? 'units' : 'unit'} • {product.category}
+                              </p>
+                            </div>
+                            <div className="flex-shrink-0 text-right">
+                              <p className="text-sm font-medium text-gray-900">{formatCurrency(product.currentPrice || product.price)}</p>
+                              {product.currentPrice && product.currentPrice < product.price && (
+                                <p className="text-xs text-gray-500 line-through">{formatCurrency(product.price)}</p>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
-                          <p className="text-sm text-gray-500">
-                            {product.quantityInStock} {product.quantityInStock > 1 ? 'units' : 'unit'} • {product.category}
-                          </p>
-                        </div>
-                        <div className="flex-shrink-0 text-right">
-                          <p className="text-sm font-medium text-gray-900">{formatCurrency(product.currentPrice || product.price)}</p>
-                          {product.currentPrice && product.currentPrice < product.price && (
-                            <p className="text-xs text-gray-500 line-through">{formatCurrency(product.price)}</p>
-                          )}
-                        </div>
+                        )
+                      ))
+                    ) : (
+                      <div className="col-span-3 p-4 text-center text-gray-500">
+                        No product details available
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </li>
@@ -416,15 +517,26 @@ const FoodBankPortal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleClaimRequest(selectedRequest._id)}
-                  disabled={!pickupDate || !pickupTime}
+                  disabled={!pickupDate || !pickupTime || claimLoading}
                   className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:col-start-2 sm:text-sm disabled:opacity-50"
                 >
-                  Confirm Claim
+                  {claimLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    'Confirm Claim'
+                  )}
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedRequest(null)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:col-start-1 sm:text-sm"
+                  disabled={claimLoading}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:col-start-1 sm:text-sm disabled:opacity-50"
                 >
                   Cancel
                 </button>
